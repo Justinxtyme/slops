@@ -42,3 +42,4 @@ void log_tag_to_vga(uint32_t type, uint32_t size) {
 
     print("\n");
 }
+

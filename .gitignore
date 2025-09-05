@@ -6,3 +6,12 @@ build/main.o
 build/slops.iso
 build/vga.o
 build/iso/boot/kernel.elf
+notes
+makemake
+kernel/entryy.asm
+kernel/gdtt.asm
+kernel/64bit_entry.asm
+build/kernel.elf
+build/gdt.o
+make make
+build/kernel.elf

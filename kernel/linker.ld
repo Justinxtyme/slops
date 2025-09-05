@@ -1,3 +1,7 @@
+/* FOR 64 BIT */
+OUTPUT_FORMAT(elf64-x86-64)
+OUTPUT_ARCH(i386:x86-64)
+
 /* Tell the linker where execution starts */
 ENTRY(_start)
 
@@ -16,19 +20,19 @@ SECTIONS
     /* Kernel code (text section) */
     .text ALIGN(4K) :
     {
-        *(.text)
+        *(.text) *(.text.*)
     }
 
     /* Read-only data */
     .rodata ALIGN(4K) :
     {
-        *(.rodata)
+        *(.rodata) *(.rodata.*)
     }
 
     /* Initialized data */
     .data ALIGN(4K) :
     {
-        *(.data)
+        *(.data) *(.data.*)
     }
 
     /* Uninitialized data (zeroed at runtime) */
@@ -45,7 +49,7 @@ SECTIONS
     {
         _stack_bottom = .;        /* lower address */
         . = . + 0x4000;           /* 16 KiB */
-        _stack_top = .;           /* higher address for ESP */
+        _stack_top = .;           /* higher address for RSP */
     }
 
     /* Optional: heap start marker */

@@ -6,14 +6,15 @@ BOOT_DIR    := $(ISO_DIR)/boot
 GRUB_DIR    := $(BOOT_DIR)/grub
 
 # Source files
-ASM_SRC     := $(SRC_DIR)/entry.asm
-C_SRC       := $(SRC_DIR)/main.c
+ASM_SRC     := $(SRC_DIR)/entry.asm 
+C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c
 VGA_SRC     := $(SRC_DIR)/vga.c
 LINKER      := $(SRC_DIR)/linker.ld
 
 # Object files
-ASM_OBJ     := $(BUILD_DIR)/entry.o
-C_OBJ       := $(BUILD_DIR)/main.o
+ASM_OBJ     := $(BUILD_DIR)/entry.o 
+C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o
+
 VGA_OBJ     := $(BUILD_DIR)/vga.o
 
 # Output files
@@ -23,15 +24,17 @@ ISO         := $(BUILD_DIR)/slops.iso
 GRUB_CFG    := $(GRUB_DIR)/grub.cfg
 
 # Compiler/Linker flags
-CFLAGS      := -ffreestanding -m32 -O2 -Wall -Wextra -fno-pie -fno-pic
-LDFLAGS     := -T $(LINKER) -melf_i386
+CFLAGS      := -ffreestanding -fno-stack-protector -fno-pic \
+               -mno-red-zone -mcmodel=kernel -O2 -Wall -Wextra -m64
+LDFLAGS     := -T $(LINKER) -nostdlib -z max-page-size=0x1000
 
 # Tools
 AS          := nasm
-CC          := gcc
-LD          := ld
-OBJCOPY     := objcopy
-QEMU        := qemu-system-i386
+CC          := x86_64-elf-gcc
+LD          := x86_64-elf-ld
+OBJCOPY     := x86_64-elf-objcopy
+QEMU        := qemu-system-x86_64
+
 
 # Default target
 all: $(ISO)
@@ -40,15 +43,12 @@ all: $(ISO)
 $(BUILD_DIR) $(ISO_DIR) $(BOOT_DIR) $(GRUB_DIR):
 	mkdir -p $@
 
-# Compile assembly
-$(ASM_OBJ): $(ASM_SRC) | $(BUILD_DIR)
-	$(AS) -f elf32 $< -o $@
+# Compile any .asm in SRC_DIR to .o in BUILD_DIR
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.asm | $(BUILD_DIR)
+	$(AS) -f elf64 $< -o $@
 
-# Compile C files
-$(C_OBJ): $(C_SRC) | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(VGA_OBJ): $(VGA_SRC) | $(BUILD_DIR)
+# Compile any .c in SRC_DIR to .o in BUILD_DIR
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 # Link kernel ELF
@@ -61,7 +61,7 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 
 # GRUB config (unchanged from your version)
 $(GRUB_CFG): | $(GRUB_DIR)
-	echo 'set timeout=5' > $@
+	echo 'set timeout=0' > $@
 	echo 'set default=0' >> $@
 	echo 'set gfxpayload=text' >> $@
 	echo 'terminal_output console' >> $@
@@ -83,7 +83,7 @@ run: $(ISO)
 	@echo "---- ISO /boot/grub ----"
 	@xorriso -indev $(ISO) -ls /boot/grub
 	$(QEMU) -cdrom $(ISO) -m 512 -vga std -no-reboot \
-		-debugcon stdio -global isa-debugcon.iobase=0xe9
+		 -global isa-debugcon.iobase=0xe9 -serial stdio #-debugcon stdio
 
 # Force full rebuild
 rebuild: clean all
