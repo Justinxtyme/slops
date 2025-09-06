@@ -1,0 +1,26 @@
+// serial.h
+
+#ifndef SERIAL_H
+#define SERIAL_H
+
+#include <stdint.h>
+
+
+
+void serial_init();
+
+void serial_write_char(char c);
+
+void serial_write(const char* s);
+
+void outb(uint16_t port, uint8_t val);
+
+void serial_write_hex8(uint8_t v);
+
+void serial_write_hex16(uint16_t v);
+
+void serial_write_hex32(uint32_t v);
+
+void serial_write_hex64(uint64_t v);
+
+#endif

@@ -15,9 +15,10 @@
 %define CR0_PE      (1 << 0)        ; CR0.PE (protected mode) - already set by GRUB
 %define CR0_PG      (1 << 31)       ; CR0.PG (enable paging)
 %define CR4_PAE     (1 << 5)        ; CR4.PAE (Physical Address Extension) - required for long mode
-%define PAGE_P      (1 << 0)        ; page present
-%define PAGE_RW     (1 << 1)        ; page writable
-%define PAGE_PS     (1 << 7)        ; page size (1 -> 2MiB in PD entry)
+%define PAGE_P   0x001
+%define PAGE_RW  0x002
+%define PAGE_PS  0x080
+
 
 ; ---------------------------------------------------------------------------------
 ; 32-bit entry (GRUB gives us control in 32-bit protected mode).
@@ -38,10 +39,21 @@ header_start:
     dd header_end - header_start ; header length in bytes
     ; checksum = -(magic + arch + length)
     dd 0x100000000 - (0xE85250D6 + 0 + (header_end - header_start))
+    dw 5                          ; type
+    dw 0                          ; flags (0 = optional)
+    dd 20                         ; size (bytes of this tag payload only)
+    dd 1024                       ; width (pixels) or 0 for no preference
+    dd 768                        ; height
+    dd 32                         ; depth (bpp), 0 for no preference
+
+    dd 0                          ; 4-byte padding so next tag is 8-byte aligned
+
+    
     ; end tag (type=0, size=8)
     dw 0
     dw 0
     dd 8
+
 header_end:
 
 ; --------------------------
@@ -104,7 +116,7 @@ _start:
 
     ; ---------- Build page tables for long mode (identity map first 1 GiB) ----------
     ; We implement setup_paging_1g as a 32-bit routine that fills PML4/PDPT/PD entries.
-    call setup_paging_1g
+    call setup_paging_4g
 
     ; ---------- Load the GDT which contains a 64-bit code selector ----------
     ; lgdt expects a memory operand containing a 16-bit limit and 32-bit base (in 32-bit).
@@ -195,86 +207,131 @@ dump_eax_vga_bottom:
 
 
 ; ------------------------------------------------------------
-; setup_paging_1g:
-;   Creates PML4[0] -> PDPT, PDPT[0] -> PD, and fills PD with 2MiB pages
-;   Each page-table entry is 64 bits. While still in 32-bit mode we write
-;   each 64-bit entry as two 32-bit writes: low dword then high dword.
+; setup_paging_4g — identity map 0–4 GiB with 2 MiB pages
 ; ------------------------------------------------------------
-setup_paging_1g:
-    ; Preserve registers we'll use (callee-saved convention not required here,
-    ; but we push/pop to avoid disturbing EDI/ECX used elsewhere).
+setup_paging_4g:
     push ebx
     push esi
     push edi
     push ecx
     push edx
 
-
-    ; Zero PML4 (512 qwords -> 4096 bytes)
-    mov edi, pml4_table        ; EDI points to PML4 base
-    mov ecx, 512               ; number of qwords to zero
-.zero_pml4_loop:
-    mov dword [edi], 0         ; write low 32 bits = 0
-    mov dword [edi+4], 0       ; write high 32 bits = 0
+    ; Zero PML4
+    mov edi, pml4_table
+    mov ecx, 512
+.zero_pml4:
+    mov dword [edi], 0
+    mov dword [edi+4], 0
     add edi, 8
-    loop .zero_pml4_loop
+    loop .zero_pml4
 
     ; Zero PDPT
     mov edi, pdpt_table
     mov ecx, 512
-.zero_pdpt_loop:
+.zero_pdpt:
     mov dword [edi], 0
     mov dword [edi+4], 0
     add edi, 8
-    loop .zero_pdpt_loop
+    loop .zero_pdpt
 
-    ; Zero PD
-    mov edi, pd_table
-    mov ecx, 512
-.zero_pd_loop:
+    ; Zero all PDs
+    mov edi, pd_table0
+    mov ecx, 512*4
+.zero_pds:
     mov dword [edi], 0
     mov dword [edi+4], 0
     add edi, 8
-    loop .zero_pd_loop
+    loop .zero_pds
 
-    ; Now link PML4[0] -> PDPT:
-    ; PML4[0] entry = physical_base_of(pdpt_table) | flags
-    ; compute low dword (address & 0xFFFFFFFF) into EBX, zero high dword
-    mov ebx, pdpt_table        ; EBX = base address of PDPT
-    ; low dword = EBX | flags (PAGE_P | PAGE_RW)
-    or ebx, PAGE_P | PAGE_RW
-    mov dword [pml4_table], ebx    ; store low 32 bits
-    mov dword [pml4_table + 4], 0  ; store high 32 bits (zero)
+    ; Link PML4[0] -> PDPT
+    mov ebx, pdpt_table
+    or  ebx, PAGE_P | PAGE_RW
+    mov dword [pml4_table + 0], ebx
+    mov dword [pml4_table + 4], 0
 
-    ; Link PDPT[0] -> PD:
-    mov ebx, pd_table
-    or ebx, PAGE_P | PAGE_RW
-    mov dword [pdpt_table], ebx
-    mov dword [pdpt_table + 4], 0
+    ; Link PDPT[0] -> PD0
+    mov ebx, pd_table0
+    or  ebx, PAGE_P | PAGE_RW
+    mov dword [pdpt_table + 0*8 + 0], ebx
+    mov dword [pdpt_table + 0*8 + 4], 0
 
-    ; Fill PD with 2MiB pages:
-    ; PD[i] = (i * 2MiB) | flags (PAGE_P | PAGE_RW | PAGE_PS)
-    xor ebx, ebx                ; EBX = i (page index)
-.fill_pd_loop_32:
-    ; compute low dword: (i * 2MiB)
-    mov eax, ebx                ; EAX = i
-    shl eax, 21                 ; EAX = i * 2^21 = i * 2MiB
-    or eax, (PAGE_P | PAGE_RW | PAGE_PS) ; set flags in low dword
-    mov dword [pd_table + ebx*8], eax   ; store low 32 bits into PD[i]
-    mov dword [pd_table + ebx*8 + 4], 0 ; high 32 bits = 0 (addresses < 4GiB)
+    ; Link PDPT[1] -> PD1
+    mov ebx, pd_table1
+    or  ebx, PAGE_P | PAGE_RW
+    mov dword [pdpt_table + 1*8 + 0], ebx
+    mov dword [pdpt_table + 1*8 + 4], 0
 
+    ; Link PDPT[2] -> PD2
+    mov ebx, pd_table2
+    or  ebx, PAGE_P | PAGE_RW
+    mov dword [pdpt_table + 2*8 + 0], ebx
+    mov dword [pdpt_table + 2*8 + 4], 0
+
+    ; Link PDPT[3] -> PD3
+    mov ebx, pd_table3
+    or  ebx, PAGE_P | PAGE_RW
+    mov dword [pdpt_table + 3*8 + 0], ebx
+    mov dword [pdpt_table + 3*8 + 4], 0
+
+    ; Fill PD0: 0–1 GiB
+    xor ebx, ebx
+.fill_pd0:
+    mov eax, ebx
+    shl eax, 21
+    or  eax, (PAGE_P | PAGE_RW | PAGE_PS)
+    mov [pd_table0 + ebx*8 + 0], eax
+    mov dword [pd_table0 + ebx*8 + 4], 0
     inc ebx
     cmp ebx, 512
-    jb .fill_pd_loop_32
+    jb .fill_pd0
 
-    ; restore saved registers
+    ; Fill PD1: 1–2 GiB
+    xor ebx, ebx
+.fill_pd1:
+    mov eax, ebx
+    shl eax, 21
+    add eax, 0x40000000        ; +1 GiB
+    or  eax, (PAGE_P | PAGE_RW | PAGE_PS)
+    mov [pd_table1 + ebx*8 + 0], eax
+    mov dword [pd_table1 + ebx*8 + 4], 0
+    inc ebx
+    cmp ebx, 512
+    jb .fill_pd1
+
+    ; Fill PD2: 2–3 GiB
+    xor ebx, ebx
+.fill_pd2:
+    mov eax, ebx
+    shl eax, 21
+    add eax, 0x80000000        ; +2 GiB
+    or  eax, (PAGE_P | PAGE_RW | PAGE_PS)
+    mov [pd_table2 + ebx*8 + 0], eax
+    mov dword [pd_table2 + ebx*8 + 4], 0
+    inc ebx
+    cmp ebx, 512
+    jb .fill_pd2
+
+    ; Fill PD3: 3–4 GiB
+    xor ebx, ebx
+.fill_pd3:
+    mov eax, ebx
+    shl eax, 21
+    add eax, 0xC0000000        ; +3 GiB
+    or  eax, (PAGE_P | PAGE_RW | PAGE_PS)
+    mov [pd_table3 + ebx*8 + 0], eax
+    mov dword [pd_table3 + ebx*8 + 4], 0
+    inc ebx
+    cmp ebx, 512
+    jb .fill_pd3
+
     pop edx
     pop ecx
     pop edi
     pop esi
     pop ebx
-
+    
     ret
+
 
 
 
@@ -332,9 +389,14 @@ long_mode_start:
 ALIGN 4096
 section .bss
 align 4096
-pml4_table:  resq 512      ; reserve 512 * 8 = 4096 bytes
-pdpt_table:  resq 512
-pd_table:    resq 512      ; will contain 2MiB-page entries (512 entries cover 1 GiB)
+pml4_table:    resb 4096
+pdpt_table:    resb 4096
+pd_table0:     resb 4096    ; 0–1 GiB
+pd_table1:     resb 4096    ; 1–2 GiB
+pd_table2:     resb 4096    ; 2–3 GiB
+pd_table3:     resb 4096    ; 3–4 GiB
+
+
 
 section .text
 

@@ -7,13 +7,13 @@ GRUB_DIR    := $(BOOT_DIR)/grub
 
 # Source files
 ASM_SRC     := $(SRC_DIR)/entry.asm 
-C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c
+C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c $(SRC_DIR)/serial.c
 VGA_SRC     := $(SRC_DIR)/vga.c
 LINKER      := $(SRC_DIR)/linker.ld
 
 # Object files
 ASM_OBJ     := $(BUILD_DIR)/entry.o 
-C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o
+C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o $(SRC_DIR)/serial.o
 
 VGA_OBJ     := $(BUILD_DIR)/vga.o
 
