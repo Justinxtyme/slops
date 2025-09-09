@@ -1,5 +1,4 @@
 // serial.h
-
 #ifndef SERIAL_H
 #define SERIAL_H
 
@@ -12,6 +11,8 @@ void serial_init();
 void serial_write_char(char c);
 
 void serial_write(const char* s);
+
+uint8_t inb(uint16_t port);
 
 void outb(uint16_t port, uint8_t val);
 

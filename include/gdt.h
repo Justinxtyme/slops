@@ -1,6 +1,7 @@
 //gdt.h
 #ifndef GDT_H 
 #define GDT_H
+
 #include <stdint.h>  
 
 // Structure representing one GDT entry (8 bytes total in this layout)

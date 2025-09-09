@@ -85,7 +85,7 @@ run: $(ISO)
 	@echo "---- ISO /boot/grub ----"
 	@xorriso -indev $(ISO) -ls /boot/grub
 	$(QEMU) -cdrom $(ISO) -m 512 -vga std -no-reboot \
-		 -global isa-debugcon.iobase=0xe9 -serial stdio #-debugcon stdio
+		 -global isa-debugcon.iobase=0xe9 -serial stdio  #-debugcon stdio
 
 # Force full rebuild
 rebuild: clean all

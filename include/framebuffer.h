@@ -1,7 +1,8 @@
+//framebuffer.h
 #ifndef FRAMEBUFFER_H
 #define FRAMEBUFFER_H
-#include <stdint.h>
 
+#include <stdint.h>
 
 typedef struct {
     uint32_t x; // pixel position

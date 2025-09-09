@@ -1,3 +1,7 @@
+//multiboot.h
+#ifndef MULTIBOOT_H
+#define MULTIBOOT_H
+
 #include <stdint.h>
 
 struct mb2_info {
@@ -61,3 +65,4 @@ struct mb2_color_info_palette {
     // struct { uint8_t red, green, blue; } palette_data[];
 };
 
+#endif

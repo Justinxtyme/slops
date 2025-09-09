@@ -30,3 +30,5 @@ kernel/serial.o
 build/isr.o
 kernel/font8x16.o
 kernel/framebuffer.o
+kernel/serial.o
+kernel/serial.o

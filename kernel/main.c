@@ -1,14 +1,14 @@
 // kernel/main.c
 #include <stdint.h>
-#include <multiboot.h>
-#include <gdt.h>
-#include <idt.h>
-#include <serial.h>
-#include <font8x16.h>
-#include <firacode.h>
-#include <types.h>
-#include <framebuffer.h>
-#include <vga.h>
+#include "multiboot.h"
+#include "gdt.h"
+#include "idt.h"
+#include "serial.h"
+#include "font8x16.h"
+#include "firacode.h"
+#include "types.h"
+#include "framebuffer.h"
+#include "vga.h"
 
 
 static inline void cpu_halt(void) {
@@ -78,27 +78,30 @@ void kernel_main(void* mb_info) {
     gdt_install();
     set_all_idt();
     __asm__ volatile ("lidt %0" : : "m"(idtr));
+    remap_pic();
+    enable_irq();
+    asm volatile("sti");
     //vga_clear(ATTR);
     serial_init();
     serial_write("Hello from kernel_main!\n");
     log_gdt_state();
     //vga_clear(ATTR);
     walk_mb2(mb_info);
-    //asm volatile ("int $8"); // vector 8, error code
     //asm volatile ("movw %0, %%ds" :: "r"((uint16_t)0x23) : "memory");
     //test_exceptions();
-    //cpu_halt();
     fb_draw_string("Hello framebuffer.... and world!", 0x00FFFFFF, 0x00000000);
     fb_clear(0x00000000);
     fb_cursor_reset();
     
     while (1) {
-        fb_draw_string(".", 0x00FFFFFF, 0x00000000);
-        sfprint(".");
+        asm volatile("cli");
+        fb_draw_string("J", 0x00FFFFFF, 0x00000000);
+        //sfprint(".");
         //fb_clear(0x00000000);
 
         for (volatile int i = 0; i < 100000000; ++i); // crude delay
         fb_clear(0x00000000);
+        asm volatile("sti");
     }
 }
 

@@ -24,15 +24,23 @@ extern struct idt_entry idt[256];
 
 extern struct idt_ptr idtr;
 
+//extern uint64_t scanbuff[50];
+
 void zero_idt(void);
 
 int set_idt_entry(int vec, void* handler, uint16_t selector, uint8_t type_attr);
 
 int set_all_idt(void);
 
-void dummy_handler(void* frame);
-
 void isr_handler(uint64_t vec, uint64_t err, uint64_t rip);
+
+void remap_pic(void);
+
+void enable_irq(void);
+
+void irq0_handler(uint64_t vec, uint64_t err, uint64_t rip);
+
+void irq1_handler(uint64_t vec, uint64_t err, uint64_t rip);
 
 // assembly interrupt funcs
 extern void isr0();
@@ -67,5 +75,9 @@ extern void isr28();
 extern void isr29();
 extern void isr30();
 extern void isr31();
-
+extern void isr32();
+extern void isr33();
+extern void isr34();
+extern void isr35();
+extern void isr36();
 #endif

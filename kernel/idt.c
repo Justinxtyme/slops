@@ -1,4 +1,5 @@
 #include "idt.h"
+
 #include <stdint.h>
 
 typedef unsigned long size_t;
@@ -24,7 +25,8 @@ void zero_idt(void) {
     }
 }
 
-
+uint8_t scanbuff[50] = {0};
+size_t head = 0;
 
 int set_idt_entry(int vec, void* handler, uint16_t selector, uint8_t type_attr) {
     sfprint("Setting IDT entry : %d\n", vec);
@@ -46,7 +48,7 @@ int set_all_idt(void) {
     // make an array of handler names of the externs. t
     void (*handler_array[])() = {isr0,isr1,isr2,isr3,isr4,isr5,isr6,isr7,isr8,isr9,isr10,
     isr11,isr12,isr13,isr14,isr15,isr16,isr17,isr18,isr19,isr20,isr21,isr22,isr23,isr24,
-    isr25,isr26,isr27,isr28,isr29,isr30,isr31};
+    isr25,isr26,isr27,isr28,isr29,isr30,isr31,isr32,isr33,isr34,isr35,isr36};
     
     // get the number of handlers
     int num_handlers = sizeof(handler_array) / sizeof(handler_array[0]);
@@ -84,19 +86,12 @@ int set_all_idt(void) {
     set_idt_entry(29, handler_array[29], 0x08, 0x8E);
     set_idt_entry(30, handler_array[30], 0x08, 0x8E);
     set_idt_entry(31, handler_array[31], 0x08, 0x8E); 
+    set_idt_entry(32, handler_array[32], 0x08, 0x8E); 
+    set_idt_entry(33, handler_array[33], 0x08, 0x8E); 
+    set_idt_entry(34, handler_array[34], 0x08, 0x8E);
+    set_idt_entry(35, handler_array[35], 0x08, 0x8E);
+    set_idt_entry(36, handler_array[36], 0x08, 0x8E);
 
-
-    //call set_idt_entry() Example; "set_idt_entry(0, isr0, 0x08, 0x0E);" 
-    // for (int i = 0; i < num_handlers; i++) {
-    //     sfprint("Setting %d handlers\n", num_handlers);
-    //     if (set_idt_entry(i, handler_array[i], 0x08, 0x8E) != 0) {
-    //         sfprint("Error setting idt entry: %d\n", i);
-    //         sfprint("%s", "Bailing!\n");
-    //         return 1;
-    //     }
-
-    // }
-    // return 0;
 }
 
 static inline uint64_t read_cr2(void) {
@@ -113,30 +108,57 @@ static void dump_pf_reason(uint64_t err) {
 }
 
 void isr_handler(uint64_t vec, uint64_t err, uint64_t rip) {
-    sfprint("Interrupt: %8\n", vec);
-    sfprint("RIP: %8\n", rip);
-    sfprint("Error code: %8\n", err);
+  
+    
     if (vec == 14) {
         uint64_t cr2 = read_cr2();
         sfprint("CR2 (fault addr): %8\n", cr2);
         dump_pf_reason(err);
     }
-    for (;;) __asm__ volatile ("hlt");
+    if (vec == 32) {
+        irq0_handler(vec, err, rip);
+    }
+    if (vec == 33) {
+        sfprint("Interrupt: %8\n", vec);
+        sfprint("RIP: %8\n", rip);
+        sfprint("Error code: %8\n", err);
+        irq1_handler(vec, err, rip);
+    }
+    //for (;;) __asm__ volatile ("hlt");
 }
 
 
 
-// void isr_handler(uint64_t vec, uint64_t err, uint64_t rip) {
-//     sfprint("Interrupt: %8\n", vec);
-//     sfprint("RIP: %8\n", rip);
-//     sfprint("Error code: %8\n", err);
-//     for(;;) __asm__ volatile("hlt");
-// }
+void remap_pic(void) {
+    outb(0x20, 0x11); // init master PIC
+    outb(0xA0, 0x11); // init slave PIC
+    outb(0x21, 0x20); // master offset = 0x20
+    outb(0xA1, 0x28); // slave offset = 0x28
+    outb(0x21, 0x04); // master PIC: slave at IRQ2
+    outb(0xA1, 0x02); // slave PIC: cascade identity
+    outb(0x21, 0x01); // master PIC: 8086 mode
+    outb(0xA1, 0x01); // slave PIC: 8086 mode
+}
 
+void irq0_handler(uint64_t vec, uint64_t err, uint64_t rip) {
+    // Send EOI to PIC
+    outb(0x20, 0x20);
+}
 
+//handle keyboard input
+void irq1_handler(uint64_t vec, uint64_t err, uint64_t rip) {
+    sfprint("keyboard input detected.\n");
+    uint8_t scancode = inb(0x60); // read from keyboard data port
+    scanbuff[head++] = scancode;
+    sfprint("keyboard input detected. Scan code: %8\n", scancode);
+    // decode scancode or buffer it
+    outb(0x20, 0x20); // send EOI to PIC
+}
 
-// __attribute__((interrupt))
-// void dummy_handler(void* frame) {
-//     // You can log something here or just halt
-//     for (;;) __asm__ volatile ("hlt");
-// }
+// enable keyboard interrupts 
+void enable_irq(void) {
+    uint8_t mask = inb(0x21); // read current Interrupt Mask Register
+    mask &= ~(1 << 1); // clear bit 1 to enable IRQ1
+    outb(0x21, mask); // update PIC
+}
+
