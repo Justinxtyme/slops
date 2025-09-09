@@ -1,6 +1,9 @@
 #include "serial.h"
+#include "string.h"
+#include "vga.h"
 
 #include <stdint.h>
+
 //////////////////////////////////////////////////////////////////
 //SERIAL OUTPUT TO LINUX ////////////////////////////////////////
 ////////////////////////////////////////////////////////////////   
@@ -75,3 +78,62 @@ void serial_write_hex64(uint64_t v) {
     serial_write_hex32(hi);
     serial_write_hex32(lo);
 }
+
+
+void format_sfprint(const char* fmt, va_list args) {
+    const char *p = fmt;
+
+    while (*p) {
+        if (*p != '%') {
+            serial_write_char(*p++);
+            continue;
+            
+        }
+
+        p++; // skip '%'
+
+        if (*p == '\0') break; // stray '%' at end of string
+
+        switch (*p) {
+            case 'd': {
+                int val = va_arg(args, int);
+                char buff[32];
+                itoa(val,buff);
+                //int_2_string(val, buff);
+                serial_write(buff);
+                break;
+            }
+            case '8': {
+                uint64_t val = va_arg(args, uint64_t);
+                char buff[32];
+                llitoa(val,buff);
+                //int_2_string(val, buff);
+                serial_write(buff);
+                break;
+            }
+            case 's': {
+                const char *sval = va_arg(args, const char*);
+                serial_write(sval);
+                break;
+            }
+            case '%': {
+                serial_write_char('%'); // handle literal %%
+                break;
+            }
+            default:
+                serial_write_char('?'); // unknown format
+                break;
+        }
+
+        p++; // move past format specifier
+    }
+}
+
+void sfprint(const char* str, ...) {
+    va_list args;
+    va_start(args, str);
+    format_sfprint(str, args);
+    va_end(args);
+}
+
+

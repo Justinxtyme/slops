@@ -15,3 +15,18 @@ build/kernel.elf
 build/gdt.o
 make make
 build/kernel.elf
+fireacodebin.dat
+.gitignore
+firacode.bmp
+firecode.bmp
+ssfiracode.png
+fcfont.png
+build/kernel.elf
+build/kernel.elf
+kernel/idt.o
+kernel/serial.o
+kernel/string.o
+kernel/serial.o
+build/isr.o
+kernel/font8x16.o
+kernel/framebuffer.o

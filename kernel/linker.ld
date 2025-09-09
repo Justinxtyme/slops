@@ -52,6 +52,13 @@ SECTIONS
         _stack_top = .;           /* higher address for RSP */
     }
 
+    /* IDT Tables */
+    .idt ALIGN(4k) : 
+    {
+        KEEP(*(.idt))
+    }
+    
+
     /* Optional: heap start marker */
     . = ALIGN(4K);
     _heap_start = .;

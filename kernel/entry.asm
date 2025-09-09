@@ -61,6 +61,7 @@ header_end:
 ; --------------------------
 section .text align=16
 global _start
+;global flush_cs
 extern kernel_main        ; C function (will be compiled as 64-bit)
 extern __bss_start__      ; linker-provided symbol (start of .bss)
 extern __bss_end__        ; linker-provided symbol (end of .bss)
@@ -344,6 +345,9 @@ BITS 64
 extern _heap_start        ; optional heap marker from linker (64-bit symbol)
 
 long_mode_start:
+    lgdt [gdt64_ptr]
+
+ 
     ; ---------------- Set up data segment registers ----------------
     ; In long mode, segmentation is mostly disabled for data. Still we must
     ; load DS/ES/SS/etc with a valid selector (0x10 -> data selector in GDT).
@@ -431,6 +435,11 @@ gdt64_end:
 section .data
 align 8
 mb2_ptr: dq 0
+
+;jump_target:
+ ;   dq flush_cs       ; 64-bit offset to the label
+  ;  dw 0x08            ; 16-bit segment selector (code segment)
+
 
 
 ; ---------------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 #define SERIAL_H
 
 #include <stdint.h>
-
+#include <stdarg.h>
 
 
 void serial_init();
@@ -22,5 +22,10 @@ void serial_write_hex16(uint16_t v);
 void serial_write_hex32(uint32_t v);
 
 void serial_write_hex64(uint64_t v);
+
+void sfprint(const char *str, ...);
+
+void format_sfprint(const char* str, va_list args);
+
 
 #endif

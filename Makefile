@@ -6,14 +6,15 @@ BOOT_DIR    := $(ISO_DIR)/boot
 GRUB_DIR    := $(BOOT_DIR)/grub
 
 # Source files
-ASM_SRC     := $(SRC_DIR)/entry.asm 
-C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c $(SRC_DIR)/serial.c
+ASM_SRC     := $(SRC_DIR)/entry.asm $(SRC_DIR)/isr.asm
+C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c $(SRC_DIR)/serial.c $(SRC_DIR)/idt.c $(SRC_DIR)/string.c $(SRC_DIR)/framebuffer.c $(SRC_DIR)/font8x16.c
 VGA_SRC     := $(SRC_DIR)/vga.c
 LINKER      := $(SRC_DIR)/linker.ld
 
 # Object files
-ASM_OBJ     := $(BUILD_DIR)/entry.o 
-C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o $(SRC_DIR)/serial.o
+ASM_OBJ     := $(BUILD_DIR)/entry.o $(BUILD_DIR)/isr.o
+C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o $(SRC_DIR)/serial.o $(SRC_DIR)/idt.o $(SRC_DIR)/string.o $(SRC_DIR)/framebuffer.o $(SRC_DIR)/font8x16.o
+VGA_SRC     := $(SRC_DIR)/vga.c
 
 VGA_OBJ     := $(BUILD_DIR)/vga.o
 
@@ -25,7 +26,8 @@ GRUB_CFG    := $(GRUB_DIR)/grub.cfg
 
 # Compiler/Linker flags
 CFLAGS      := -ffreestanding -fno-stack-protector -fno-pic \
-               -mno-red-zone -mcmodel=kernel -O2 -Wall -Wextra -m64
+               -mno-red-zone -mcmodel=kernel -O2 -Wall -Wextra -m64 -Iinclude
+
 LDFLAGS     := -T $(LINKER) -nostdlib -z max-page-size=0x1000
 
 # Tools

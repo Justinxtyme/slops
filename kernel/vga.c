@@ -29,6 +29,43 @@ void itoa(unsigned int value, char* buffer) {
     *p = '\0';
 }
 
+void litoa(unsigned long int value, char* buffer) {
+    char* p = buffer;
+    if (value == 0) {
+        *p++ = '0';
+    } else {
+        char temp[10];
+        int i = 0;
+        while (value > 0) {
+            temp[i++] = '0' + (value % 10);
+            value /= 10;
+        }
+        while (i--) {
+            *p++ = temp[i];
+        }
+    }
+    *p = '\0';
+}
+
+void llitoa(unsigned long long int value, char* buffer) {
+    char* p = buffer;
+    if (value == 0) {
+        *p++ = '0';
+    } else {
+        char temp[10];
+        int i = 0;
+        while (value > 0) {
+            temp[i++] = '0' + (value % 10);
+            value /= 10;
+        }
+        while (i--) {
+            *p++ = temp[i];
+        }
+    }
+    *p = '\0';
+}
+
+
 void log_tag_to_vga(uint32_t type, uint32_t size) {
     char buffer[32];
 
