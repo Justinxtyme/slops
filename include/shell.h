@@ -24,9 +24,9 @@ typedef struct {
 
 #define LINEBUFF_SIZE 128
 
-int process_scancode(uint8_t scancode);
+int process_scancode(ShellContext *shell, uint8_t scancode);
 
-int process_cmd(char *cmd);
+int process_cmd(ShellContext *shell, char *cmd);
 
 
 void init_shell_lines(void);

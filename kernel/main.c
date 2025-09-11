@@ -12,6 +12,8 @@
 #include "kbd.h"
 #include "shell.h"
 
+
+
 static inline void cpu_halt(void) {
     for(;;){ __asm__ __volatile__("cli; hlt"); }
 }
@@ -95,13 +97,15 @@ void kernel_main(void* mb_info) {
     for (volatile int i = 0; i < 1000000000; ++i); // crude delay
     fb_clear(0x00000000);
     fb_cursor_reset();
+    ShellContext shell = { .running = 1 };
+    fb_draw_string("THRASH$ ", FG, BG);
     
-    while (1) {
+    while (shell.running) {
         asm volatile("cli");
         //fb_draw_string("J", 0x00FFFFFF, 0x00000000);
         //sfprint(".");
         //fb_clear(0x00000000);
-        read_sc();
+        read_sc(&shell);
         //for (volatile int i = 0; i < 100000000; ++i); // crude delay
         //fb_clear(0x00000000);
         asm volatile("sti");

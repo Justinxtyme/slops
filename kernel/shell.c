@@ -25,7 +25,8 @@ void init_shell_lines(void) {
 void shell_cursor_reset(void) {
     fb_cursor.x = 0;
     fb_cursor.y = shell_line * FONT_HEIGHT;
-    sfprint("cursor reset: %8, %8\n", fb_cursor.x, fb_cursor.y); 
+    sfprint("cursor reset: %8, %8\n", fb_cursor.x, fb_cursor.y);
+    fb_draw_string("THRASH>", FG, BG); 
 }
 
 
@@ -40,6 +41,7 @@ void clear_line() {
 
     fb_draw_string(spaces, FG, BG);
     fb_cursor.x = 0;
+    fb_draw_string("THRASH$ ", FG, BG);
 }
 
 
@@ -76,7 +78,7 @@ void scroll_screen_up() {
 
 
 
-int process_scancode(uint8_t scancode) {
+int process_scancode(ShellContext *shell, uint8_t scancode) {
     sfprint("Processing: %8\n", scancode);
     uint8_t ascii = scancode2ascii(scancode);
     sfprint("ASCII: %8\n", ascii);
@@ -98,6 +100,7 @@ int process_scancode(uint8_t scancode) {
         }
 
         line_len = 0;
+        process_cmd(shell, linebuff);
         return 0;
 
     } else if (ascii == '\b' && line_len > 0) {
@@ -130,65 +133,30 @@ int process_scancode(uint8_t scancode) {
     }
 }
 
-
-int process_cmd(char *cmd) {
-    shell_cursor_reset();
-
-    fb_draw_string(cmd, FG, BG);
-
-    shell_line++;
-    if (shell_line >= max_lines) {
-        scroll_screen_up();
-        shell_line = max_lines - 1;
+static int str_eq(const char *a, const char *b) {
+    while (*a && *b) {
+        if (*a != *b) return 0;
+        a++;
+        b++;
     }
-
-    return 0;
+    return (*a == '\0' && *b == '\0');
 }
 
-// int process_scancode(uint8_t scancode) {
-//     sfprint("Processing: %8\n", scancode);
-//     uint8_t ascii = scancode2ascii(scancode);
-//     sfprint("ASCII: %8\n", ascii);
-//     sfprint("Line length: %8\n", line_len);
-//     if (ascii == '\n') {
-//         linebuff[line_len] = '\0';
-//         //scroll_screen_up();
-//         clear_line();
-//         process_cmd(linebuff);
-//         line_len = 0;;
-//         return 0;
-    
-//     } else if (ascii == '\b' && line_len > 0) {
-//         line_len--;
-//         linebuff[line_len] = '\0';
-//         if (fb_cursor.x >= FONT_WIDTH) fb_cursor.x -= FONT_WIDTH; //move cursor back one space
-//         clear_line(); 
-//         fb_draw_string(linebuff, FG, BG); //redraw line
-//         return 0;    
-    
-//     } else if (isprint(ascii) && line_len < LINEBUFF_SIZE - 1) {
-//         int max_chars = framebuffer.width / FONT_WIDTH;
-//         if (line_len >= max_chars) {
-//             //scroll_screen_up();
-//             //shell_cursor_reset();
-//         }
-//         linebuff[line_len++] = ascii;
-//         linebuff[line_len] = '\0';
-//         fb_cursor.x = 0;
-//         if (shell_line >= max_lines) {
-//             scroll_screen_up();
-//             shell_line = max_lines - 1;
-//         }
 
-//         fb_cursor.y = shell_line * FONT_HEIGHT;
 
-//         clear_line(); 
-//         fb_draw_string(linebuff, FG, BG);
-//         return 0; 
+int process_cmd(ShellContext *shell, char *cmd) {
+    sfprint("COMMAND PROCESSING: %s\n", cmd);
+
+    if (!cmd) {
+        sfprint("no command detected\n");
+        return 0;
+    } 
     
-//     } else {
-//         sfprint("Error processing scan code");
-//         // do something?? idk
-//         return 1;     
-//     }
-// }
+    if (str_eq(cmd, "EXIT")  || str_eq(cmd, "QUIT")) {
+        shell->running = 0;
+        return 0;
+    } else {
+        sfprint("Command is no bueno\n");
+        return 0;
+    }
+}

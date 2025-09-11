@@ -4,6 +4,7 @@
 
 #include <stdint.h>
 #include "serial.h"
+#include "shell.h"
 
 struct idt_entry {
     uint16_t offset_low;     // bits 0–15 of handler address
@@ -24,7 +25,7 @@ extern struct idt_entry idt[256];
 
 extern struct idt_ptr idtr;
 
-int read_sc(void);
+int read_sc(ShellContext *shell);
 
 
 void zero_idt(void);

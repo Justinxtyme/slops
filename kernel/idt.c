@@ -21,7 +21,7 @@ kbuff_t kbuff = {0};
 
 
 
-int read_sc(void) {
+int read_sc(ShellContext *shell) {
     if (kbuff.tail == kbuff.head) return 0; //  buffer is empty
     while (kbuff.tail != kbuff.head) {
         sfprint("Reading sc: %8\n", kbuff.tail);
@@ -31,7 +31,7 @@ int read_sc(void) {
         if (sc & 0x80) {
             continue;
         }
-        process_scancode(sc);
+        process_scancode(shell, sc);
     } 
     return 0;   
 }
