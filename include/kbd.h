@@ -3,7 +3,9 @@
 #define KBD_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
+#define KBDBUFFSIZE 128
 
 struct KeyboardState {
     bool lshift;
@@ -16,5 +18,14 @@ struct KeyboardState {
     // ...
 };
 
+
+typedef struct {
+    uint8_t head;
+    uint8_t tail;
+    uint8_t scancodes[KBDBUFFSIZE];
+    
+} kbuff_t;
+
+uint8_t scancode2ascii(uint8_t key);
 
 #endif

@@ -24,7 +24,8 @@ extern struct idt_entry idt[256];
 
 extern struct idt_ptr idtr;
 
-//extern uint64_t scanbuff[50];
+int read_sc(void);
+
 
 void zero_idt(void);
 

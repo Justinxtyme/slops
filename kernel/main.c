@@ -9,7 +9,8 @@
 #include "types.h"
 #include "framebuffer.h"
 #include "vga.h"
-
+#include "kbd.h"
+#include "shell.h"
 
 static inline void cpu_halt(void) {
     for(;;){ __asm__ __volatile__("cli; hlt"); }
@@ -89,18 +90,20 @@ void kernel_main(void* mb_info) {
     walk_mb2(mb_info);
     //asm volatile ("movw %0, %%ds" :: "r"((uint16_t)0x23) : "memory");
     //test_exceptions();
+    init_shell_lines();
     fb_draw_string("Hello framebuffer.... and world!", 0x00FFFFFF, 0x00000000);
+    for (volatile int i = 0; i < 1000000000; ++i); // crude delay
     fb_clear(0x00000000);
     fb_cursor_reset();
     
     while (1) {
         asm volatile("cli");
-        fb_draw_string("J", 0x00FFFFFF, 0x00000000);
+        //fb_draw_string("J", 0x00FFFFFF, 0x00000000);
         //sfprint(".");
         //fb_clear(0x00000000);
-
-        for (volatile int i = 0; i < 100000000; ++i); // crude delay
-        fb_clear(0x00000000);
+        read_sc();
+        //for (volatile int i = 0; i < 100000000; ++i); // crude delay
+        //fb_clear(0x00000000);
         asm volatile("sti");
     }
 }

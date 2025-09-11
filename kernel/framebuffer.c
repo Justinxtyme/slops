@@ -17,8 +17,8 @@ fb_cursor_t fb_cursor = {0, 0}; // start at top-left
 
 #define COM1_PORT 0x3F8
 
-#define FONT_WIDTH 8
-#define FONT_HEIGHT 16
+// #define FONT_WIDTH 8
+// #define FONT_HEIGHT 16
 
 ///////////////////////////////////////////////////////////////
 // VGA helpers for printing to screen/////////////////////////
@@ -54,6 +54,7 @@ static inline void fb_putpixel(uint8_t* fb, uint32_t pitch,
     *(uint32_t*)(fb + y * pitch + x * 4) = color;
 }
 
+
 void fb_draw_char(uint8_t* fb, uint32_t pitch,
                   uint32_t x, uint32_t y,
                   char c, uint32_t fg, uint32_t bg) {
@@ -66,26 +67,19 @@ void fb_draw_char(uint8_t* fb, uint32_t pitch,
         }
     }
 }
-// void fb_draw_string(uint8_t* fb, uint32_t pitch,
-//                     uint32_t x, uint32_t y,
-//                     const char* s, uint32_t fg, uint32_t bg) {
-//     while (*s) {
-//         fb_draw_char(fb, pitch, x, y, *s++, fg, bg);
-//         x += 8; // advance by char width
-//     }
-// }
 
 void fb_draw_string(const char* str, uint32_t fg, uint32_t bg) {
     // Loop through each character in the input string
+    sfprint("drawing to x, y coord: %8, %8\n", fb_cursor.x, fb_cursor.y);
     for (size_t i = 0; str[i]; ++i) {
 
         // If the character is a newline, move cursor to start of next line
         if (str[i] == '\n') {
             fb_cursor.x = 0;                  // Reset horizontal position
-            fb_cursor.y += FONT_HEIGHT;       // Move down one line
+            fb_cursor.y += FONT_HEIGHT;
+            sfprint("str[i] y coord: %8\n", fb_cursor.y);       // Move down one line
             continue;                         // Skip drawing this character
         }
-
         // Draw the character at the current cursor position
         fb_draw_char(fbuff_base, framebuffer.pitch,
                      fb_cursor.x, fb_cursor.y,
@@ -95,16 +89,18 @@ void fb_draw_string(const char* str, uint32_t fg, uint32_t bg) {
         fb_cursor.x += FONT_WIDTH;
 
         // If cursor reaches the end of the screen width, wrap to next line
-        if (fb_cursor.x + FONT_WIDTH > framebuffer.width) {
-            fb_cursor.x = 0;                  // Reset horizontal position
-            fb_cursor.y += FONT_HEIGHT;       // Move down one line
-        }
+        // if (fb_cursor.x + FONT_WIDTH > framebuffer.width) {
+        //     fb_cursor.x = 0;                  // Reset horizontal position
+        //     sfprint("line94: %8\n", fb_cursor.y); 
+        //     fb_cursor.y += FONT_HEIGHT;       // Move down one line
+        //     sfprint("line96: %8\n", fb_cursor.y); 
+        // }
 
         // If cursor reaches the bottom of the screen, wrap to top (no scroll yet)
-        if (fb_cursor.y + FONT_HEIGHT > framebuffer.height) {
-            fb_cursor.y = 0;                  // Reset vertical position
-            // You could implement scrolling here later
-        }
+        // if (fb_cursor.y + FONT_HEIGHT > framebuffer.height) {
+        //      = 0;                  // Reset vertical position
+        //     // You could implement scrolling here later
+        // }
     }
 }
 
@@ -189,12 +185,21 @@ void walk_mb2(void* mb_ptr) {
             void *color_info_addr = (void *)((uint8_t *)fb + sizeof(struct mb2_tag) + fixed_size_without_tag);
 
             serial_write("Framebuffer info:\n");
+            // serial_write("  Addr: 0x"); serial_write_hex64(fb->framebuffer_addr); serial_write("\n");
+            // serial_write("  Pitch: "); serial_write_hex32(fb->framebuffer_pitch); serial_write("\n");
+            // serial_write("  Width: "); serial_write_hex32(fb->framebuffer_width); serial_write("\n");
+            // serial_write("  Height: "); serial_write_hex32(fb->framebuffer_height); serial_write("\n");
+            // serial_write("  BPP: "); serial_write_hex8(fb->framebuffer_bpp); serial_write("\n");
+            // serial_write("  Type: "); serial_write_hex8(fb->framebuffer_type); serial_write("\n");
+
             serial_write("  Addr: 0x"); serial_write_hex64(fb->framebuffer_addr); serial_write("\n");
-            serial_write("  Pitch: "); serial_write_hex32(fb->framebuffer_pitch); serial_write("\n");
-            serial_write("  Width: "); serial_write_hex32(fb->framebuffer_width); serial_write("\n");
-            serial_write("  Height: "); serial_write_hex32(fb->framebuffer_height); serial_write("\n");
-            serial_write("  BPP: "); serial_write_hex8(fb->framebuffer_bpp); serial_write("\n");
-            serial_write("  Type: "); serial_write_hex8(fb->framebuffer_type); serial_write("\n");
+            sfprint("  Pitch: %8\n", fb->framebuffer_pitch);
+            sfprint("  Width: %8\n", fb->framebuffer_width);
+            sfprint("  Height: %8\n", fb->framebuffer_height);
+            sfprint("  BPP: %8\n", fb->framebuffer_bpp); 
+            sfprint("  Type: %8\n", fb->framebuffer_type);
+            sfprint("expected pitch: %d\n", fb->framebuffer_width * 4);
+ 
             
             
             // GLOBAL FRAMEBUFFER STRUCT 
@@ -239,9 +244,7 @@ void walk_mb2(void* mb_ptr) {
             
             uint8_t* fb_base = (uint8_t*)(uintptr_t)fb->framebuffer_addr;
             sfprint("fb_base addr: %8\n", fb_base);
-            fb_draw_string("Hello framebuffer.... and world!", 0x00FFFFFF, 0x00000000);
             }
-
         }
         // Advance to next tag
         uint64_t adv = align8(tag->size);

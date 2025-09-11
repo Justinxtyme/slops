@@ -2,9 +2,12 @@
 #include <stdint.h>
 
 
-bool shift_active = false;
 
-void kbd2ascii(uint8_t key) {
+
+
+//bool shift_active = false;
+
+uint8_t scancode2ascii(uint8_t key) {
     uint8_t out;
     switch (key) {
         case 1:
@@ -60,7 +63,7 @@ void kbd2ascii(uint8_t key) {
             break;
 
         case 14:
-            // Backspace
+            out = '\b';
             break;
 
         case 15:
@@ -116,7 +119,7 @@ void kbd2ascii(uint8_t key) {
             break;
 
         case 28:
-            // Enter
+            out = '\n';
             break;
 
         case 29:
@@ -339,4 +342,8 @@ void kbd2ascii(uint8_t key) {
             // Delete
             break;
     }
+    if (key > 83) {
+        out = '1';
+    }
+    return out;
 }

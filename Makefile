@@ -7,13 +7,13 @@ GRUB_DIR    := $(BOOT_DIR)/grub
 
 # Source files
 ASM_SRC     := $(SRC_DIR)/entry.asm $(SRC_DIR)/isr.asm
-C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c $(SRC_DIR)/serial.c $(SRC_DIR)/idt.c $(SRC_DIR)/string.c $(SRC_DIR)/framebuffer.c $(SRC_DIR)/font8x16.c
+C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c $(SRC_DIR)/serial.c $(SRC_DIR)/idt.c $(SRC_DIR)/string.c $(SRC_DIR)/framebuffer.c $(SRC_DIR)/font8x16.c $(SRC_DIR)/shell.c $(SRC_DIR)/mem.c $(SRC_DIR)/kbd.c
 VGA_SRC     := $(SRC_DIR)/vga.c
 LINKER      := $(SRC_DIR)/linker.ld
 
 # Object files
 ASM_OBJ     := $(BUILD_DIR)/entry.o $(BUILD_DIR)/isr.o
-C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o $(SRC_DIR)/serial.o $(SRC_DIR)/idt.o $(SRC_DIR)/string.o $(SRC_DIR)/framebuffer.o $(SRC_DIR)/font8x16.o
+C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o $(SRC_DIR)/serial.o $(SRC_DIR)/idt.o $(SRC_DIR)/string.o $(SRC_DIR)/framebuffer.o $(SRC_DIR)/font8x16.o $(SRC_DIR)/shell.o $(SRC_DIR)/mem.o $(SRC_DIR)/kbd.o
 VGA_SRC     := $(SRC_DIR)/vga.c
 
 VGA_OBJ     := $(BUILD_DIR)/vga.o
@@ -65,8 +65,10 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 $(GRUB_CFG): | $(GRUB_DIR)
 	echo 'set timeout=0' > $@
 	echo 'set default=0' >> $@
-	echo 'set gfxpayload=text' >> $@
-	echo 'terminal_output console' >> $@
+	echo 'set gfxpayload=1024x768x32' >> $@
+	echo 'set gfxpayload=keep' >> $@
+	echo 'terminal_output gfxterm' >> $@
+	
 	echo 'menuentry "SLOPS" {' >> $@
 	echo '  echo "GRUB loaded successfully"' >> $@
 	echo '  multiboot2 /boot/kernel.elf' >> $@

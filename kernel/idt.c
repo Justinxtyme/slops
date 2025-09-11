@@ -1,16 +1,40 @@
 #include "idt.h"
 
+#include "kbd.h"
+
+#include "shell.h"
 #include <stdint.h>
 
 typedef unsigned long size_t;
+
 
 struct idt_ptr idtr = {
     .limit = sizeof(idt) - 1,
     .base  = (uint64_t)&idt
 };
 
+// INIT  STRUCT FOR STORING IDT ENTRIES
 struct idt_entry idt[256];
 
+//INIT STRUCT FOR KEYBOARD RING BUFFER
+kbuff_t kbuff = {0};
+
+
+
+int read_sc(void) {
+    if (kbuff.tail == kbuff.head) return 0; //  buffer is empty
+    while (kbuff.tail != kbuff.head) {
+        sfprint("Reading sc: %8\n", kbuff.tail);
+        uint8_t sc = kbuff.scancodes[kbuff.tail]; // pull scan code from tail.
+        kbuff.tail = (kbuff.tail + 1) % KBDBUFFSIZE; // move tail up, safely wrapping if > buff size;
+        sfprint("Tail is now: %8\n", kbuff.tail);
+        if (sc & 0x80) {
+            continue;
+        }
+        process_scancode(sc);
+    } 
+    return 0;   
+}
 
 void zero_idt(void) {
     struct idt_entry* e = idt;
@@ -25,8 +49,7 @@ void zero_idt(void) {
     }
 }
 
-uint8_t scanbuff[50] = {0};
-size_t head = 0;
+
 
 int set_idt_entry(int vec, void* handler, uint16_t selector, uint8_t type_attr) {
     sfprint("Setting IDT entry : %d\n", vec);
@@ -91,7 +114,8 @@ int set_all_idt(void) {
     set_idt_entry(34, handler_array[34], 0x08, 0x8E);
     set_idt_entry(35, handler_array[35], 0x08, 0x8E);
     set_idt_entry(36, handler_array[36], 0x08, 0x8E);
-
+    
+    return 0;
 }
 
 static inline uint64_t read_cr2(void) {
@@ -149,11 +173,14 @@ void irq0_handler(uint64_t vec, uint64_t err, uint64_t rip) {
 void irq1_handler(uint64_t vec, uint64_t err, uint64_t rip) {
     sfprint("keyboard input detected.\n");
     uint8_t scancode = inb(0x60); // read from keyboard data port
-    scanbuff[head++] = scancode;
     sfprint("keyboard input detected. Scan code: %8\n", scancode);
+    kbuff.scancodes[kbuff.head] = scancode;
+    kbuff.head = (kbuff.head + 1) % KBDBUFFSIZE;
     // decode scancode or buffer it
     outb(0x20, 0x20); // send EOI to PIC
 }
+
+
 
 // enable keyboard interrupts 
 void enable_irq(void) {

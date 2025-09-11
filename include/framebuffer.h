@@ -4,6 +4,11 @@
 
 #include <stdint.h>
 
+#define FONT_WIDTH 8
+#define FONT_HEIGHT 16
+#define FG 0x00FFFFFF
+#define BG 0x00000000
+
 typedef struct {
     uint32_t x; // pixel position
     uint32_t y;

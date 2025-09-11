@@ -1,4 +1,5 @@
 #include "string.h"
+#include <stdint.h>
 
 int custom_strlen(char *s) {
     int length = 0;
@@ -55,3 +56,6 @@ void int_2_string(int val, char* buff) {
     reverse_string(buff);  
 } 
 
+int isprint(uint8_t c) {
+    return (c >= 0x20 && c <= 0x7E);
+}
