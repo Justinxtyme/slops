@@ -3,9 +3,28 @@
 
 #include <stdint.h>
 #include <stddef.h> 
+#include "multiboot.h"
 
-void fb_memcpy(uint8_t* dest, const uint8_t* src, size_t count);
 
-void fb_memset(uint8_t* dest, uint8_t value, size_t count);
+
+typedef struct Chunk {
+    size_t size;
+    int is_free;
+    struct Chunk *next;
+} Chunk;
+
+void mem_init();
+
+void add_region(uint64_t base, uint64_t length);
+
+void init_allocator(const struct multiboot_tag_mmap* mmap); 
+
+uint64_t alloc_frame();
+
+void free_frame(uint64_t addr);
+
+void* thralloc(size_t size);
+
+size_t thralloc_total();
 
 #endif

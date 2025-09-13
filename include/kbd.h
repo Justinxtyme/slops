@@ -7,7 +7,8 @@
 
 #define KBDBUFFSIZE 128
 
-struct KeyboardState {
+
+typedef struct KbdState {
     bool lshift;
     bool rshift;
     bool lctrl;
@@ -15,8 +16,9 @@ struct KeyboardState {
     bool lalt;
     bool ralt;
     bool capslock;
+    bool numlock;
     // ...
-};
+} KBD;
 
 
 typedef struct {
@@ -27,5 +29,11 @@ typedef struct {
 } kbuff_t;
 
 uint8_t scancode2ascii(uint8_t key);
+
+void init_kbd_state(void);
+
+bool cap_true(void);
+
+bool symbol_shift(void);
 
 #endif

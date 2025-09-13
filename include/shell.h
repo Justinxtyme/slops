@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include "kbd.h"
 
-
 #define INPUT_SIZE 1024
+#define LINEBUFF_SIZE 128
 
 typedef struct {
     char input[INPUT_SIZE];   // User input buffer
@@ -22,7 +22,7 @@ typedef struct {
 
 
 
-#define LINEBUFF_SIZE 128
+void draw_prompt(void);
 
 int process_scancode(ShellContext *shell, uint8_t scancode);
 

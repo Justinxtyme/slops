@@ -23,14 +23,13 @@ struct GDTPtr {
 // Our actual GDT table: 3 entries (null, code, data)
 static struct GDTEntry gdt[3];
 
-
 // The descriptor we’ll load into GDTR with lgdt
 extern struct GDTPtr gdt_descriptor;
-
-
 
 void gdt_init(void);
 
 void gdt_install(void);
+
+void log_gdt_state(void);
 
 #endif

@@ -24,12 +24,21 @@ struct multiboot_tag_string {
     char string[];
 };
 
+
+
+struct multiboot_mmap_entry {
+    uint64_t base_addr;
+    uint64_t length;
+    uint32_t type;
+    uint32_t reserved;
+};
+
 struct multiboot_tag_mmap {
     uint32_t type;
     uint32_t size;
     uint32_t entry_size;
     uint32_t entry_version;
-    //struct multiboot_mmap_entry entries[];
+    struct multiboot_mmap_entry entries[];
 };
 
 struct mb2_tag_framebuffer {

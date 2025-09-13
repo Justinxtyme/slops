@@ -44,6 +44,15 @@ void irq0_handler(uint64_t vec, uint64_t err, uint64_t rip);
 
 void irq1_handler(uint64_t vec, uint64_t err, uint64_t rip);
 
+void trigger_ud(void);
+ 
+void trigger_pf(void);
+
+void trigger_gp(void);
+
+void test_exceptions(void);
+
+
 // assembly interrupt funcs
 extern void isr0();
 extern void isr1();

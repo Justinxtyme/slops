@@ -3,11 +3,14 @@
 #include "multiboot.h"
 #include "types.h"
 #include "font8x16.h"
+#include "mem.h"
 
 framebuffer_info_t framebuffer = {0}; // zero-init
 uint8_t* fbuff_base = 0;// = (uint8_t*)(uintptr_t)fb->framebuffer_addr;
 
 fb_cursor_t fb_cursor = {0, 0}; // start at top-left
+
+const struct multiboot_tag_mmap* memb;
 
 #define VGA_COLS  80
 #define VGA_ROWS  25
@@ -160,7 +163,7 @@ void walk_mb2(void* mb_ptr) {
     int count = 0;
 
     while (p + sizeof(struct mb2_tag) <= end && cap-- > 0) {
-        serial_write("Entered While loop\n");
+        //serial_write("Entered While loop\n");
         const struct mb2_tag* tag = (const struct mb2_tag*)p;
         if (tag->type == 0 && tag->size == 8) {
             sfprint("Framebuffer addr: %8\n", framebuffer.addr);
@@ -171,6 +174,25 @@ void walk_mb2(void* mb_ptr) {
         serial_write("Tag type: "); serial_write_hex32(tag->type);
         serial_write(" Tag size: "); serial_write_hex32(tag->size);
         serial_write("\n");
+
+
+        // struct multiboot_mmap_entry {
+        //     uint64_t base_addr;
+        //     uint64_t length;
+        //     uint32_t type;
+        //     uint32_t reserved;
+        // };
+
+
+
+
+        if (tag->type == 6 && tag->size >= sizeof(struct multiboot_tag_mmap)) {
+            memb = (const struct multiboot_tag_mmap*)tag;
+            init_allocator(memb);   
+        }
+
+
+
 
         if (tag->type == 8 && tag->size >= sizeof(struct mb2_tag_framebuffer)) {
             sfprint("Framebuffer addr: %8\n", framebuffer.addr);

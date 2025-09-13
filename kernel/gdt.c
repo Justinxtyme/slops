@@ -1,5 +1,6 @@
 //gdt.c
 #include "gdt.h"
+#include "serial.h"
 
 void gdt_init(void) {
     gdt[0] = (struct GDTEntry){0}; // null
@@ -51,3 +52,32 @@ void gdt_install(void) {
 }
 
 struct GDTPtr gdt_descriptor;
+
+
+
+///////////////////////////////////////////////////////////////
+// quick test for proper GDT setup////////////////////////////
+/////////////////////////////////////////////////////////////
+void log_gdt_state(void) {
+    uint16_t cs, ds, es, ss;
+    __asm__ volatile ("mov %%cs, %0" : "=r"(cs));
+    __asm__ volatile ("mov %%ds, %0" : "=r"(ds));
+    __asm__ volatile ("mov %%es, %0" : "=r"(es));
+    __asm__ volatile ("mov %%ss, %0" : "=r"(ss));
+
+    serial_write("CS: "); serial_write_char('0' + ((cs >> 4) & 0xF)); serial_write_char('0' + (cs & 0xF)); serial_write("\n");
+    serial_write("DS: "); serial_write_char('0' + ((ds >> 4) & 0xF)); serial_write_char('0' + (ds & 0xF)); serial_write("\n");
+    serial_write("ES: "); serial_write_char('0' + ((es >> 4) & 0xF)); serial_write_char('0' + (es & 0xF)); serial_write("\n");
+    serial_write("SS: "); serial_write_char('0' + ((ss >> 4) & 0xF)); serial_write_char('0' + (ss & 0xF)); serial_write("\n");
+
+    struct {
+        uint16_t limit;
+        uint64_t base;
+    } __attribute__((packed)) gdtr;
+
+    __asm__ volatile ("sgdt %0" : "=m"(gdtr));
+
+    serial_write("GDTR.limit: "); serial_write_char('0' + ((gdtr.limit >> 4) & 0xF)); serial_write_char('0' + (gdtr.limit & 0xF)); serial_write("\n");
+    serial_write("GDTR.base: ");  // Just dump low byte for sanity
+    serial_write_char('0' + ((gdtr.base >> 4) & 0xF)); serial_write_char('0' + (gdtr.base & 0xF)); serial_write("\n");
+}

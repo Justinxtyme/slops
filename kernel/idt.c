@@ -24,13 +24,13 @@ kbuff_t kbuff = {0};
 int read_sc(ShellContext *shell) {
     if (kbuff.tail == kbuff.head) return 0; //  buffer is empty
     while (kbuff.tail != kbuff.head) {
-        sfprint("Reading sc: %8\n", kbuff.tail);
+        //sfprint("Reading sc: %8\n", kbuff.tail);
         uint8_t sc = kbuff.scancodes[kbuff.tail]; // pull scan code from tail.
         kbuff.tail = (kbuff.tail + 1) % KBDBUFFSIZE; // move tail up, safely wrapping if > buff size;
-        sfprint("Tail is now: %8\n", kbuff.tail);
-        if (sc & 0x80) {
-            continue;
-        }
+        //sfprint("Tail is now: %8\n", kbuff.tail);
+        // if (sc & 0x80) {
+        //     continue;
+        // }
         process_scancode(shell, sc);
     } 
     return 0;   
@@ -52,7 +52,7 @@ void zero_idt(void) {
 
 
 int set_idt_entry(int vec, void* handler, uint16_t selector, uint8_t type_attr) {
-    sfprint("Setting IDT entry : %d\n", vec);
+    //sfprint("Setting IDT entry : %d\n", vec);
     uint64_t addr = (uint64_t)handler;
     idt[vec].offset_low  = addr & 0xFFFF;
     idt[vec].selector    = selector;
@@ -61,7 +61,7 @@ int set_idt_entry(int vec, void* handler, uint16_t selector, uint8_t type_attr) 
     idt[vec].offset_mid  = (addr >> 16) & 0xFFFF;
     idt[vec].offset_high = (addr >> 32) & 0xFFFFFFFF;
     idt[vec].zero        = 0;
-    sfprint("addr: %8\n", addr);
+    //sfprint("addr: %8\n", addr);
     return 0;
 }
 
@@ -136,16 +136,16 @@ void isr_handler(uint64_t vec, uint64_t err, uint64_t rip) {
     
     if (vec == 14) {
         uint64_t cr2 = read_cr2();
-        sfprint("CR2 (fault addr): %8\n", cr2);
+        //sfprint("CR2 (fault addr): %8\n", cr2);
         dump_pf_reason(err);
     }
     if (vec == 32) {
         irq0_handler(vec, err, rip);
     }
     if (vec == 33) {
-        sfprint("Interrupt: %8\n", vec);
-        sfprint("RIP: %8\n", rip);
-        sfprint("Error code: %8\n", err);
+        //sfprint("Interrupt: %8\n", vec);
+        //sfprint("RIP: %8\n", rip);
+        //sfprint("Error code: %8\n", err);
         irq1_handler(vec, err, rip);
     }
     //for (;;) __asm__ volatile ("hlt");
@@ -171,11 +171,12 @@ void irq0_handler(uint64_t vec, uint64_t err, uint64_t rip) {
 
 //handle keyboard input
 void irq1_handler(uint64_t vec, uint64_t err, uint64_t rip) {
-    sfprint("keyboard input detected.\n");
     uint8_t scancode = inb(0x60); // read from keyboard data port
     sfprint("keyboard input detected. Scan code: %8\n", scancode);
     kbuff.scancodes[kbuff.head] = scancode;
+    sfprint("Scan code after store: %8\n", kbuff.scancodes[kbuff.head]);
     kbuff.head = (kbuff.head + 1) % KBDBUFFSIZE;
+
     // decode scancode or buffer it
     outb(0x20, 0x20); // send EOI to PIC
 }
@@ -189,3 +190,27 @@ void enable_irq(void) {
     outb(0x21, mask); // update PIC
 }
 
+
+void trigger_ud(void) {
+    asm volatile ("ud2"); // guaranteed invalid opcode
+}
+ 
+void trigger_pf(void) {
+    volatile uint8_t *ptr = (uint8_t*)0x100000000ULL; // 4 GiB
+    *ptr = 0xAA; // write to unmapped address
+}
+
+void trigger_gp(void) {
+    asm volatile ("movw %0, %%ds" :: "r"((uint16_t)0x23) : "memory");
+}
+
+void test_exceptions(void) {
+    //sfprint("Triggering #UD...\n");
+    //trigger_ud();
+
+    sfprint("Triggering #PF...\n");
+    trigger_pf();
+
+    sfprint("Triggering #GP...\n");
+    trigger_gp();
+}

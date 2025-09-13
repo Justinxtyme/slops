@@ -8,6 +8,7 @@
 //#include <ctype.h>
 #include <stddef.h> 
 
+
 char linebuff[LINEBUFF_SIZE];
 size_t line_len = 0;
 int shell_line = 0;
@@ -18,15 +19,19 @@ void init_shell_lines(void) {
     shell_line = 0;
     max_lines = framebuffer.height / (FONT_HEIGHT) - 1;
     max_chars = framebuffer.width / FONT_WIDTH;
-    sfprint("shell line: %8\n", shell_line);
+    //sfprint("shell line: %8\n", shell_line);
 }
+
+void draw_prompt(void) {
+    fb_draw_string("THRASH: ", 0x0099FFFF, BG);
+} 
 
 //void translate_scancode 
 void shell_cursor_reset(void) {
     fb_cursor.x = 0;
     fb_cursor.y = shell_line * FONT_HEIGHT;
-    sfprint("cursor reset: %8, %8\n", fb_cursor.x, fb_cursor.y);
-    fb_draw_string("THRASH>", FG, BG); 
+    //sfprint("cursor reset: %8, %8\n", fb_cursor.x, fb_cursor.y);
+    draw_prompt();
 }
 
 
@@ -41,16 +46,16 @@ void clear_line() {
 
     fb_draw_string(spaces, FG, BG);
     fb_cursor.x = 0;
-    fb_draw_string("THRASH$ ", FG, BG);
+    draw_prompt();
 }
 
 
 
 
 void scroll_screen_up() {
-    sfprint("shell_line: %d\n", shell_line);
-    sfprint("max_lines: %d\n", max_lines);
-    sfprint("cursor.y: %d\n", fb_cursor.y);
+    //sfprint("shell_line: %d\n", shell_line);
+    //sfprint("max_lines: %d\n", max_lines);
+    //sfprint("cursor.y: %d\n", fb_cursor.y);
     if (shell_line >= max_lines) {
         uint32_t* fb = (uint32_t*)(uintptr_t)framebuffer.addr;
         int pixels_per_row = framebuffer.pitch / 4;
@@ -81,11 +86,11 @@ void scroll_screen_up() {
 int process_scancode(ShellContext *shell, uint8_t scancode) {
     sfprint("Processing: %8\n", scancode);
     uint8_t ascii = scancode2ascii(scancode);
-    sfprint("ASCII: %8\n", ascii);
-    sfprint("Line length: %8\n", line_len);
+    //sfprint("ASCII: %8\n", ascii);
+    //sfprint("Line length: %8\n", line_len);
 
     if (ascii == '\n') {
-        sfprint("Newline detected, x,y = %8, %8\n", fb_cursor.x, fb_cursor.y);
+        //sfprint("Newline detected, x,y = %8, %8\n", fb_cursor.x, fb_cursor.y);
         linebuff[line_len] = '\0';
 
         // Print the command on the current line
@@ -112,8 +117,8 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
         return 0;
 
     } else if (isprint(ascii) && line_len < LINEBUFF_SIZE - 1) {
-        sfprint("shell line: %8\n", shell_line);
-        sfprint("ISPRINT drawing to x, y coord: %8, %8\n", fb_cursor.x, fb_cursor.y);
+        //sfprint("shell line: %8\n", shell_line);
+        //sfprint("ISPRINT drawing to x, y coord: %8, %8\n", fb_cursor.x, fb_cursor.y);
         if (line_len >= max_chars) {
             fb_cursor.x = 0;
             fb_cursor.y += FONT_HEIGHT; 
@@ -121,14 +126,19 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
 
         linebuff[line_len++] = ascii;
         linebuff[line_len] = '\0';
-        sfprint("coord right before clear_line: %8, %8\n", fb_cursor.x, fb_cursor.y);
+        //sfprint("coord right before clear_line: %8, %8\n", fb_cursor.x, fb_cursor.y);
         clear_line();
-        sfprint("coord right before redraw: %8, %8\n", fb_cursor.x, fb_cursor.y);
+        //sfprint("coord right before redraw: %8, %8\n", fb_cursor.x, fb_cursor.y);
         fb_draw_string(linebuff, FG, BG);
         return 0;
 
+    } else if (ascii == 255) {
+        //sfprint("255 returned\n");
+        
+        return 0;
+    
     } else {
-        sfprint("Error processing scan code");
+        //sfprint("Error processing scan code");
         return 1;
     }
 }
@@ -145,10 +155,10 @@ static int str_eq(const char *a, const char *b) {
 
 
 int process_cmd(ShellContext *shell, char *cmd) {
-    sfprint("COMMAND PROCESSING: %s\n", cmd);
+    //sfprint("COMMAND PROCESSING: %s\n", cmd);
 
     if (!cmd) {
-        sfprint("no command detected\n");
+        //sfprint("no command detected\n");
         return 0;
     } 
     
@@ -156,7 +166,7 @@ int process_cmd(ShellContext *shell, char *cmd) {
         shell->running = 0;
         return 0;
     } else {
-        sfprint("Command is no bueno\n");
+        //sfprint("Command is no bueno\n");
         return 0;
     }
 }

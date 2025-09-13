@@ -10,6 +10,7 @@
 #include "framebuffer.h"
 #include "vga.h"
 #include "kbd.h"
+#include "mem.h"
 #include "shell.h"
 
 
@@ -19,58 +20,6 @@ static inline void cpu_halt(void) {
 }
 
 
-///////////////////////////////////////////////////////////////
-// quick test for proper GDT setup////////////////////////////
-/////////////////////////////////////////////////////////////
-static void log_gdt_state(void) {
-    uint16_t cs, ds, es, ss;
-    __asm__ volatile ("mov %%cs, %0" : "=r"(cs));
-    __asm__ volatile ("mov %%ds, %0" : "=r"(ds));
-    __asm__ volatile ("mov %%es, %0" : "=r"(es));
-    __asm__ volatile ("mov %%ss, %0" : "=r"(ss));
-
-    serial_write("CS: "); serial_write_char('0' + ((cs >> 4) & 0xF)); serial_write_char('0' + (cs & 0xF)); serial_write("\n");
-    serial_write("DS: "); serial_write_char('0' + ((ds >> 4) & 0xF)); serial_write_char('0' + (ds & 0xF)); serial_write("\n");
-    serial_write("ES: "); serial_write_char('0' + ((es >> 4) & 0xF)); serial_write_char('0' + (es & 0xF)); serial_write("\n");
-    serial_write("SS: "); serial_write_char('0' + ((ss >> 4) & 0xF)); serial_write_char('0' + (ss & 0xF)); serial_write("\n");
-
-    struct {
-        uint16_t limit;
-        uint64_t base;
-    } __attribute__((packed)) gdtr;
-
-    __asm__ volatile ("sgdt %0" : "=m"(gdtr));
-
-    serial_write("GDTR.limit: "); serial_write_char('0' + ((gdtr.limit >> 4) & 0xF)); serial_write_char('0' + (gdtr.limit & 0xF)); serial_write("\n");
-    serial_write("GDTR.base: ");  // Just dump low byte for sanity
-    serial_write_char('0' + ((gdtr.base >> 4) & 0xF)); serial_write_char('0' + (gdtr.base & 0xF)); serial_write("\n");
-}
-
-
-
-static void trigger_ud(void) {
-    asm volatile ("ud2"); // guaranteed invalid opcode
-}
- 
-static void trigger_pf(void) {
-    volatile uint8_t *ptr = (uint8_t*)0x100000000ULL; // 4 GiB
-    *ptr = 0xAA; // write to unmapped address
-}
-
-static void trigger_gp(void) {
-    asm volatile ("movw %0, %%ds" :: "r"((uint16_t)0x23) : "memory");
-}
-
-void test_exceptions(void) {
-    //sfprint("Triggering #UD...\n");
-    //trigger_ud();
-
-    sfprint("Triggering #PF...\n");
-    trigger_pf();
-
-    sfprint("Triggering #GP...\n");
-    trigger_gp();
-}
 
 ///////////////////////////////////////////////////////////////
 //ENTRY POINT FROM BOOTLOAD///////////////////////////////////
@@ -98,7 +47,11 @@ void kernel_main(void* mb_info) {
     fb_clear(0x00000000);
     fb_cursor_reset();
     ShellContext shell = { .running = 1 };
-    fb_draw_string("THRASH$ ", FG, BG);
+    mem_init();
+    int *arr = thralloc(1000);
+    thralloc_total();
+    init_kbd_state();
+    draw_prompt();
     
     while (shell.running) {
         asm volatile("cli");
