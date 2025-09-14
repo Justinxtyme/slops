@@ -12,6 +12,7 @@
 #include "kbd.h"
 #include "mem.h"
 #include "shell.h"
+#include "ata.h"
 
 
 
@@ -25,7 +26,14 @@ static inline void cpu_halt(void) {
 //ENTRY POINT FROM BOOTLOAD///////////////////////////////////
 /////////////////////////////////////////////////////////////
 void kernel_main(void* mb_info) {
-    outb(0xE9, 'M'); // debug marker
+    //outb(0xE9, 'M'); // debug marker
+    uint8_t status = inb(0x60);
+    sfprint("Initial ATA status: %h\n", status);
+//initialize serial output
+    serial_init();
+    serial_write("Hello from kernel_main!\n");
+
+    // initialize GDT and IDT and MEM
     gdt_init();
     gdt_install();
     set_all_idt();
@@ -33,23 +41,24 @@ void kernel_main(void* mb_info) {
     remap_pic();
     enable_irq();
     asm volatile("sti");
-    //vga_clear(ATTR);
-    serial_init();
-    serial_write("Hello from kernel_main!\n");
     log_gdt_state();
-    //vga_clear(ATTR);
+    mem_init();
+    
+    // Walk multiboot header to pull necessary data and  
     walk_mb2(mb_info);
-    //asm volatile ("movw %0, %%ds" :: "r"((uint16_t)0x23) : "memory");
-    //test_exceptions();
+
     init_shell_lines();
-    fb_draw_string("Hello framebuffer.... and world!", 0x00FFFFFF, 0x00000000);
-    for (volatile int i = 0; i < 1000000000; ++i); // crude delay
+    //fb_draw_string("Hello framebuffer.... and world!", 0x00FFFFFF, 0x00000000);
+    //for (volatile int i = 0; i < 1000000000; ++i); // crude delay
     fb_clear(0x00000000);
     fb_cursor_reset();
     ShellContext shell = { .running = 1 };
-    mem_init();
-    int *arr = thralloc(1000);
+    int *arr = thralloc(1024);
     thralloc_total();
+    tfree(arr);
+    thralloc_total();
+    cmd_dump_sector(0);
+    kbd_init(); 
     init_kbd_state();
     draw_prompt();
     

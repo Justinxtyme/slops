@@ -28,5 +28,8 @@ void sfprint(const char *str, ...);
 
 void format_sfprint(const char* str, va_list args);
 
+void u32tohex(uint32_t val, char* buff);
+
+void u8tohex(uint8_t val, char* out);
 
 #endif

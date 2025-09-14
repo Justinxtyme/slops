@@ -27,4 +27,6 @@ void* thralloc(size_t size);
 
 size_t thralloc_total();
 
+void tfree(void *ptr);
+
 #endif

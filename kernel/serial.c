@@ -79,6 +79,23 @@ void serial_write_hex64(uint64_t v) {
     serial_write_hex32(lo);
 }
 
+void u32tohex(uint32_t val, char* buff) {
+    const char* hex_chars = "0123456789ABCDEF";
+    for (int i = 0; i < 8; i++) {
+        buff[i] = hex_chars[(val >> (28 - i * 4)) & 0xF];
+    }
+    buff[8] = '\0';
+}
+
+void u8tohex(uint8_t val, char* out) {
+    const char* hex = "0123456789ABCDEF";
+    out[0] = hex[(val >> 4) & 0xF];
+    out[1] = hex[val & 0xF];
+    out[2] = '\0';
+}
+
+
+
 
 void format_sfprint(const char* fmt, va_list args) {
     const char *p = fmt;
@@ -95,7 +112,7 @@ void format_sfprint(const char* fmt, va_list args) {
         if (*p == '\0') break; // stray '%' at end of string
 
         switch (*p) {
-            case 'd': {
+            case 'd': { // integer
                 int val = va_arg(args, int);
                 char buff[32];
                 itoa(val,buff);
@@ -103,7 +120,7 @@ void format_sfprint(const char* fmt, va_list args) {
                 serial_write(buff);
                 break;
             }
-            case '8': {
+            case '8': { //prints 64 bit num. still works for all unsigned sizes (8,16,32)
                 uint64_t val = va_arg(args, uint64_t);
                 char buff[32];
                 llitoa(val,buff);
@@ -111,11 +128,26 @@ void format_sfprint(const char* fmt, va_list args) {
                 serial_write(buff);
                 break;
             }
-            case 's': {
+            case 's': { //string
                 const char *sval = va_arg(args, const char*);
                 serial_write(sval);
                 break;
             }
+            case 'x': {
+                uint32_t val = va_arg(args, uint32_t);
+                char buff[32];
+                u32tohex(val, buff); 
+                serial_write(buff);
+                break;
+            }
+            case 'h': { // hex byte
+                uint8_t val = va_arg(args, int); // promoted to int
+                char buff[3];
+                u8tohex(val, buff); // you'll write this
+                serial_write(buff);
+                break;
+            }
+
             case '%': {
                 serial_write_char('%'); // handle literal %%
                 break;

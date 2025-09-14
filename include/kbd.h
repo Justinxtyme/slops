@@ -36,4 +36,8 @@ bool cap_true(void);
 
 bool symbol_shift(void);
 
+
+
+void kbd_init(void); 
+
 #endif

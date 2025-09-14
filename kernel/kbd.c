@@ -4,7 +4,66 @@
 #include "serial.h"
 #include <stdbool.h>
 
-// keyboard state struct
+#define KBD_DATA_PORT   0x60
+#define KBD_STATUS_PORT 0x64
+#define KBD_CMD_PORT    0x64
+
+#define KBD_CMD_SET_LEDS 0xED
+#define KBD_CMD_ENABLE   0xF4
+
+// Bit masks for LEDs
+#define LED_SCROLL 0x01
+#define LED_NUM    0x02
+#define LED_CAPS   0x04
+
+static uint8_t capslock_state = 0;
+static uint8_t numlock_state = 0;
+static uint8_t scrolllock_state = 0;
+
+static void kb_wait_write(void) {
+    while (inb(KBD_STATUS_PORT) & 0x02); // wait until input buffer clear
+}
+
+static void kb_wait_read(void) {
+    while (!(inb(KBD_STATUS_PORT) & 0x01)); // wait until output buffer full
+}
+
+static void kb_set_leds(uint8_t mask) {
+    kb_wait_write();
+    outb(KBD_DATA_PORT, KBD_CMD_SET_LEDS); // tell keyboard: set LEDs
+    kb_wait_write();
+    outb(KBD_DATA_PORT, mask); // send LED bitmask
+}
+
+// Flush any pending bytes from the controller
+static void kb_flush(void) {
+    while (inb(KBD_STATUS_PORT) & 0x01) {
+        (void)inb(KBD_DATA_PORT);
+    }
+}
+
+void kbd_init(void) {
+    kb_flush(); // clear any junk from buffer
+
+    // Force known LED state: all off
+    capslock_state = 0;
+    numlock_state = 0;
+    scrolllock_state = 0;
+    kb_set_leds(0);
+
+    // Enable scanning so keyboard starts sending key events
+    kb_wait_write();
+    outb(KBD_DATA_PORT, KBD_CMD_ENABLE);
+
+    // Optional: print debug info
+    sfprint("Keyboard initialized. Caps=%d Num=%d Scroll=%d\n",
+            capslock_state, numlock_state, scrolllock_state);
+}
+
+
+
+
+// keyboard state struct for shell
 KBD kbd;
 
 

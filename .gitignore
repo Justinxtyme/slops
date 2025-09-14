@@ -35,3 +35,9 @@ kernel/serial.o
 kernel/kbd.o
 kernel/shell.o
 kernel/mem.o
+fs.img
+hello.txt
+is_free
+.gitignore
+kernel/ata.o
+kernel/serial.o

@@ -7,13 +7,19 @@ GRUB_DIR    := $(BOOT_DIR)/grub
 
 # Source files
 ASM_SRC     := $(SRC_DIR)/entry.asm $(SRC_DIR)/isr.asm
-C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c $(SRC_DIR)/serial.c $(SRC_DIR)/idt.c $(SRC_DIR)/string.c $(SRC_DIR)/framebuffer.c $(SRC_DIR)/font8x16.c $(SRC_DIR)/shell.c $(SRC_DIR)/mem.c $(SRC_DIR)/kbd.c
+C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c $(SRC_DIR)/serial.c $(SRC_DIR)/idt.c $(SRC_DIR)/string.c \
+               $(SRC_DIR)/framebuffer.c $(SRC_DIR)/font8x16.c $(SRC_DIR)/shell.c $(SRC_DIR)/mem.c $(SRC_DIR)/kbd.c \
+			   $(SRC_DIR)/ata.c
+
 VGA_SRC     := $(SRC_DIR)/vga.c
 LINKER      := $(SRC_DIR)/linker.ld
 
 # Object files
 ASM_OBJ     := $(BUILD_DIR)/entry.o $(BUILD_DIR)/isr.o
-C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o $(SRC_DIR)/serial.o $(SRC_DIR)/idt.o $(SRC_DIR)/string.o $(SRC_DIR)/framebuffer.o $(SRC_DIR)/font8x16.o $(SRC_DIR)/shell.o $(SRC_DIR)/mem.o $(SRC_DIR)/kbd.o
+C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o $(SRC_DIR)/serial.o $(SRC_DIR)/idt.o $(SRC_DIR)/string.o \
+			   $(SRC_DIR)/framebuffer.o $(SRC_DIR)/font8x16.o $(SRC_DIR)/shell.o $(SRC_DIR)/mem.o $(SRC_DIR)/kbd.o \
+			   $(SRC_DIR)/ata.o
+
 VGA_SRC     := $(SRC_DIR)/vga.c
 
 VGA_OBJ     := $(BUILD_DIR)/vga.o
@@ -86,8 +92,11 @@ run: $(ISO)
 	@xorriso -indev $(ISO) -ls /boot
 	@echo "---- ISO /boot/grub ----"
 	@xorriso -indev $(ISO) -ls /boot/grub
-	$(QEMU) -cdrom $(ISO) -m 512 -vga std -no-reboot \
-		 -global isa-debugcon.iobase=0xe9 -serial stdio  #-debugcon stdio
+		 
+	$(QEMU) -m 1G -cdrom $(ISO) -drive file=fs.img,format=raw,if=ide,index=0 -boot d \
+			 -no-reboot -global isa-debugcon.iobase=0xe9 -serial stdio 
+	 
+   #-debugcon stdio
 
 # Force full rebuild
 rebuild: clean all

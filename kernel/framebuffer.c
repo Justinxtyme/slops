@@ -63,7 +63,6 @@ void fb_draw_char(uint8_t* fb, uint32_t pitch,
                   char c, uint32_t fg, uint32_t bg) {
     for (int row = 0; row < 16; row++) {
         uint8_t bits = font8x16[(uint8_t)c][row];
-        //uint8_t bits = firacode[(uint8_t)c][row];
         for (int col = 0; col < 8; col++) {
             uint32_t color = (bits & (0x80 >> col)) ? fg : bg;
             fb_putpixel(fb, pitch, x + col, y + row, color);
