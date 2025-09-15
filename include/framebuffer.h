@@ -3,6 +3,8 @@
 #define FRAMEBUFFER_H
 
 #include <stdint.h>
+#include <stdarg.h>
+#include "types.h"
 
 #define FONT_WIDTH 8
 #define FONT_HEIGHT 16
@@ -13,9 +15,6 @@ typedef struct {
     uint32_t x; // pixel position
     uint32_t y;
 } fb_cursor_t;
-
-extern fb_cursor_t fb_cursor;
-
 
 
 typedef struct {
@@ -33,9 +32,12 @@ typedef struct {
     uint8_t framebuffer_blue_mask_size;
 } framebuffer_info_t;
 
-extern framebuffer_info_t framebuffer;
 
+extern fb_cursor_t fb_cursor;
+extern framebuffer_info_t framebuffer;
 extern uint8_t* fbuff_base;
+
+
 
 void walk_mb2(void* mb_ptr);
 
@@ -50,8 +52,17 @@ void fb_draw_char(uint8_t* fb, uint32_t pitch,
 
 void fb_draw_string(const char* str, uint32_t fg, uint32_t bg);
 
+void fb_draw_string_with_cursor(const char* str, size_t cursor_pos, uint32_t fg,
+                                 uint32_t bg, uint32_t cursor_fg, uint32_t cursor_bg);
+
 void fb_cursor_reset(void);
 
 void fb_clear(uint32_t bg_color);
+
+
+// On the backburner for now
+// void sfbprint(const char* str, ...);
+
+// void format_fbprint(const char* fmt, va_list args);
 
 #endif

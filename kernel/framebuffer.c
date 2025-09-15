@@ -4,6 +4,9 @@
 #include "types.h"
 #include "font8x16.h"
 #include "mem.h"
+#include "serial.h"
+#include "string.h"
+#include "vga.h"
 
 framebuffer_info_t framebuffer = {0}; // zero-init
 uint8_t* fbuff_base = 0;// = (uint8_t*)(uintptr_t)fb->framebuffer_addr;
@@ -89,22 +92,40 @@ void fb_draw_string(const char* str, uint32_t fg, uint32_t bg) {
 
         // Advance the cursor horizontally by one character width
         fb_cursor.x += FONT_WIDTH;
-
-        // If cursor reaches the end of the screen width, wrap to next line
-        // if (fb_cursor.x + FONT_WIDTH > framebuffer.width) {
-        //     fb_cursor.x = 0;                  // Reset horizontal position
-        //     sfprint("line94: %8\n", fb_cursor.y); 
-        //     fb_cursor.y += FONT_HEIGHT;       // Move down one line
-        //     sfprint("line96: %8\n", fb_cursor.y); 
-        // }
-
-        // If cursor reaches the bottom of the screen, wrap to top (no scroll yet)
-        // if (fb_cursor.y + FONT_HEIGHT > framebuffer.height) {
-        //      = 0;                  // Reset vertical position
-        //     // You could implement scrolling here later
-        // }
     }
 }
+
+void fb_draw_string_with_cursor(const char* str, size_t cursor_pos, uint32_t fg, uint32_t bg, uint32_t cursor_fg, uint32_t cursor_bg) {
+
+    for (size_t i = 0; str[i]; ++i) {
+        if (str[i] == '\n') {
+            fb_cursor.x = 0;
+            fb_cursor.y += FONT_HEIGHT;
+            continue;
+        }
+
+        // If this is the cursor position, draw with inverted colors
+        if (i == cursor_pos) {
+            fb_draw_char(fbuff_base, framebuffer.pitch,
+                         fb_cursor.x, fb_cursor.y,
+                         str[i], cursor_fg, cursor_bg);
+        } else {
+            fb_draw_char(fbuff_base, framebuffer.pitch,
+                         fb_cursor.x, fb_cursor.y,
+                         str[i], fg, bg);
+        }
+
+        fb_cursor.x += FONT_WIDTH;
+    }
+
+    // If cursor is at end of line (after last char), draw a block or underscore
+    if (cursor_pos == custom_strlen(str)) {
+        fb_draw_char(fbuff_base, framebuffer.pitch,
+                     fb_cursor.x, fb_cursor.y,
+                     '_', cursor_fg, cursor_bg);
+    }
+}
+
 
 void fb_cursor_reset(void) {
     fb_cursor.x = 0;
@@ -141,6 +162,77 @@ void fb_clear(uint32_t bg_color) {
         // fb[i + 3] = (bg_color >> 24) & 0xFF;
     }
 }
+//// FORMATTED FRAMBUFFER PRINT ON THE BACKBURNER FOR NOW
+// void format_fbprint(const char* fmt, va_list args) {
+//     const char *p = fmt;
+
+//     while (*p) {
+//         if (*p != '%') {
+//             serial_write_char(*p++);
+//             continue;
+            
+//         }
+
+//         p++; // skip '%'
+
+//         if (*p == '\0') break; // stray '%' at end of string
+
+//         switch (*p) {
+//             case 'd': { // integer
+//                 int val = va_arg(args, int);
+//                 char buff[32];
+//                 itoa(val,buff);
+//                 //int_2_string(val, buff);
+//                 fb_draw_string(buff, FG, BG);
+//                 break;
+//             }
+//             case '8': { //prints 64 bit num. still works for all unsigned sizes (8,16,32)
+//                 uint64_t val = va_arg(args, uint64_t);
+//                 char buff[32];
+//                 llitoa(val,buff);
+//                 //int_2_string(val, buff);
+//                 fb_draw_string(buff, FG, BG);
+//                 break;
+//             }
+//             case 's': { //string
+//                 const char *sval = va_arg(args, const char*);
+//                 serial_write(sval);
+//                 break;
+//             }
+//             case 'x': {
+//                 uint32_t val = va_arg(args, uint32_t);
+//                 char buff[32];
+//                 u32tohex(val, buff); 
+//                 fb_draw_string(buff, FG, BG);
+//                 break;
+//             }
+//             case 'h': { // hex byte
+//                 uint8_t val = va_arg(args, int); // promoted to int
+//                 char buff[3];
+//                 u8tohex(val, buff); // you'll write this
+//                 fb_draw_string(buff, FG, BG);
+//                 break;
+//             }
+
+//             case '%': {
+//                 serial_write_char('%'); // handle literal %%
+//                 break;
+//             }
+//             default:
+//                 serial_write_char('?'); // unknown format
+//                 break;
+//         }
+
+//         p++; // move past format specifier
+//     }
+// }
+
+// void sfbprint(const char* str, ...) {
+//     va_list args;
+//     va_start(args, str);
+//     format_fbprint(str, args);
+//     va_end(args);
+// }
 
 
 

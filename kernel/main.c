@@ -21,6 +21,9 @@ static inline void cpu_halt(void) {
 }
 
 
+static inline void outw(uint16_t port, uint16_t value) {
+    __asm__ volatile ("outw %0, %1" : : "a"(value), "Nd"(port));
+}
 
 ///////////////////////////////////////////////////////////////
 //ENTRY POINT FROM BOOTLOAD///////////////////////////////////
@@ -47,12 +50,13 @@ void kernel_main(void* mb_info) {
     // Walk multiboot header to pull necessary data and  
     walk_mb2(mb_info);
 
-    init_shell_lines();
+    //init_shell_lines(&shell);
     //fb_draw_string("Hello framebuffer.... and world!", 0x00FFFFFF, 0x00000000);
     //for (volatile int i = 0; i < 1000000000; ++i); // crude delay
     fb_clear(0x00000000);
     fb_cursor_reset();
     ShellContext shell = { .running = 1 };
+    init_shell_lines(&shell);
     int *arr = thralloc(1024);
     thralloc_total();
     tfree(arr);
@@ -72,6 +76,11 @@ void kernel_main(void* mb_info) {
         //fb_clear(0x00000000);
         asm volatile("sti");
     }
+
+    asm volatile("cli; hlt");
+
+    outw(0x604, 0x2000); // QEMU exits with code 0
+
 }
 
 

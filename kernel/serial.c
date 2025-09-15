@@ -167,5 +167,3 @@ void sfprint(const char* str, ...) {
     format_sfprint(str, args);
     va_end(args);
 }
-
-
