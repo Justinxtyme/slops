@@ -110,14 +110,16 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
 
         // Print the command on the current line
         clear_line(shell);
-        fb_draw_string_with_cursor(linebuff, cursor_pos, FG, BG, BG, FG);
-        //fb_draw_string(linebuff, FG, BG);
+        //fb_draw_string_with_cursor(linebuff, cursor_pos, FG, BG, BG, FG);
+        fb_draw_string(linebuff, FG, BG);
 
         // Advance to next line
         shell->shell_line++;
         if (shell->shell_line >= max_lines) {
             scroll_screen_up(shell);
             shell->shell_line = max_lines - 1;
+            // shell_cursor_reset(shell);
+            // draw_prompt();
         }
 
         line_len = 0;

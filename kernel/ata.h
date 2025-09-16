@@ -13,4 +13,6 @@ int dump_mem(uint8_t* buffer, size_t length);
 
 void cmd_dump_sector(int lba);
 
+void read_root(void);
+
 #endif

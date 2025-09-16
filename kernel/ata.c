@@ -102,8 +102,8 @@
 #define ATA_STATUS_DF      0x20
 #define ATA_STATUS_DRDY    0x40
 #define ATA_STATUS_BSY     0x80
-
-
+#define root_dir_sectors 14 
+#define root_start_lba 19
 static inline uint16_t inw(uint16_t port) {
     uint16_t result;
     __asm__ volatile ("inw %1, %0" : "=a"(result) : "dN"(port));
@@ -191,6 +191,7 @@ int dump_mem(uint8_t* buffer, size_t length) {
     return 1;
 }
 
+// RECURSIONNNNNNNNNNNNNNNNNNNNNNN
 void cmd_dump_sector(int lba) {
     uint8_t buffer[512];
     ata_read_sector(lba, buffer);
@@ -200,4 +201,13 @@ void cmd_dump_sector(int lba) {
         cmd_dump_sector(lba + 1);
         return;
     }
+}
+void read_root(void) {
+    uint8_t buffer[512];
+    for (uint32_t i = 0; i < root_dir_sectors; i++) {
+        ata_read_sector(root_start_lba + i, buffer);
+        dump_mem(buffer, 512);
+        // parse 32-byte entries in buffer
+    }
+
 }

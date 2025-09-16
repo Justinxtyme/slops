@@ -61,18 +61,20 @@ void kernel_main(void* mb_info) {
     thralloc_total();
     tfree(arr);
     thralloc_total();
-    cmd_dump_sector(0);
+    cmd_dump_sector(19);
+    //read_root();
     kbd_init(); 
     init_kbd_state();
     draw_prompt();
     
     while (shell.running) {
+        asm volatile("hlt");
         asm volatile("cli");
         //fb_draw_string("J", 0x00FFFFFF, 0x00000000);
         //sfprint(".");
         //fb_clear(0x00000000);
         read_sc(&shell);
-        //for (volatile int i = 0; i < 100000000; ++i); // crude delay
+        //for (volatile int i = 0; i < 100000; ++i); // crude delay
         //fb_clear(0x00000000);
         asm volatile("sti");
     }

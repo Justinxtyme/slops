@@ -12,4 +12,6 @@ void int_2_string(int val, char* buff);
 
 int isprint(uint8_t c);
 
+char val2ascii(char val);
+
 #endif

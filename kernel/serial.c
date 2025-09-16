@@ -147,7 +147,14 @@ void format_sfprint(const char* fmt, va_list args) {
                 serial_write(buff);
                 break;
             }
-
+            case 'c': {
+                char val = va_arg(args, char);
+                char buff[2];
+                itoa(val, buff);    
+                serial_write(buff);
+                break;
+            }
+            
             case '%': {
                 serial_write_char('%'); // handle literal %%
                 break;
