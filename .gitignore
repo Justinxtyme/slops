@@ -41,3 +41,15 @@ is_free
 .gitignore
 kernel/ata.o
 kernel/serial.o
+a.txt
+a2.txt
+a3.txt
+b.txt
+HELLO.TXT
+HELLO2.TXT
+kernel/fat.o
+build/kernel.elf
+ITER.TXT
+iter.txt
+PANCAKES.TXT
+PCAKE.TXT

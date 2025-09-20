@@ -7,7 +7,7 @@
 #include "kbd.h"
 #include "types.h"
 //#include <ctype.h>
-#include <stddef.h> 
+#include <stddef.h>
 
 
 char linebuff[LINEBUFF_SIZE];
@@ -26,9 +26,9 @@ void init_shell_lines(ShellContext *shell) {
 
 void draw_prompt(void) {
     fb_draw_string("THRASH: ", 0x0099FFFF, BG);
-} 
+}
 
-//void translate_scancode 
+//void translate_scancode
 void shell_cursor_reset(ShellContext *shell) {
     fb_cursor.x = 0;
     fb_cursor.y = shell->shell_line * FONT_HEIGHT;
@@ -84,6 +84,12 @@ void scroll_screen_up(ShellContext *shell) {
     }
 }
 
+static void clamp_n_scroll(ShellContext *shell) {
+    if (shell->shell_line >= max_lines) {
+        scroll_screen_up(shell);
+        shell->shell_line = max_lines - 1;
+    }
+}
 
 
 int process_scancode(ShellContext *shell, uint8_t scancode) {
@@ -92,36 +98,28 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
         cursor_pos--;
         clear_line(shell);
         fb_draw_string_with_cursor(linebuff, cursor_pos, FG, BG, BG, FG);
-        return 0; 
+        return 0;
     }
     if (scancode == 77 && cursor_pos < line_len) {
         cursor_pos++;
         clear_line(shell);
         fb_draw_string_with_cursor(linebuff, cursor_pos, FG, BG, BG, FG);
-        return 0; 
+        return 0;
     }
     uint8_t ascii = scancode2ascii(scancode);
     //sfprint("ASCII: %8\n", ascii);
     //sfprint("Line length: %8\n", line_len);
 
     if (ascii == '\n') {
-        //sfprint("Newline detected, x,y = %8, %8\n", fb_cursor.x, fb_cursor.y);
         linebuff[line_len] = '\0';
+        // clear line and reprint without cursor
+        clamp_n_scroll(shell);
 
-        // Print the command on the current line
         clear_line(shell);
-        //fb_draw_string_with_cursor(linebuff, cursor_pos, FG, BG, BG, FG);
         fb_draw_string(linebuff, FG, BG);
-
         // Advance to next line
         shell->shell_line++;
-        if (shell->shell_line >= max_lines) {
-            scroll_screen_up(shell);
-            shell->shell_line = max_lines - 1;
-            // shell_cursor_reset(shell);
-            // draw_prompt();
-        }
-
+        clamp_n_scroll(shell);
         line_len = 0;
         cursor_pos = 0;
         process_cmd(shell, linebuff);
@@ -144,7 +142,7 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
         //sfprint("ISPRINT drawing to x, y coord: %8, %8\n", fb_cursor.x, fb_cursor.y);
         if (line_len >= max_chars) {
             fb_cursor.x = 0;
-            fb_cursor.y += FONT_HEIGHT; 
+            fb_cursor.y += FONT_HEIGHT;
         }
 
         if (cursor_pos < line_len) {
@@ -152,8 +150,8 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
         }
         linebuff[cursor_pos] = ascii;
         cursor_pos++;
-        line_len++;
-        linebuff[line_len] = '\0';
+        //line_len++;
+        linebuff[++line_len] = '\0';
 
         //sfprint("coord right before clear_line: %8, %8\n", fb_cursor.x, fb_cursor.y);
         clear_line(shell);
@@ -164,9 +162,9 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
 
     } else if (ascii == 255) {
         //sfprint("255 returned\n");
-        
+
         return 0;
-    
+
     } else {
         //sfprint("Error processing scan code");
         return 1;
@@ -192,12 +190,16 @@ int process_cmd(ShellContext *shell, char *cmd) {
         clear_line(shell);
         shell->shell_line++;
         fb_draw_string("No command detected", FG, BG);
+        clear_line(shell);
         return 0;
-    } 
-    
+    }
+
     if (str_eq(cmd, "EXIT")  || str_eq(cmd, "QUIT")) {
         shell->running = 0;
         return 0;
+    } else if (str_eq(cmd, "READ")) {
+
+
     } else {
         clear_line(shell);
         shell->shell_line++;

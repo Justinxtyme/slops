@@ -2,6 +2,32 @@
 #include <stdint.h>
 #include "types.h"
 
+int cst_strcmp(char *str1, char *str2) {
+    int len1 = custom_strlen(str1);
+    int len2 = custom_strlen(str2);
+    
+    if (len1 != len2) {
+       sfprint("cst_strcmp: strings are not equal\n");
+       return 0;
+    }
+    
+    char *p1 = str1;
+    char *p2 = str2;  
+    int cnt  = 0;
+    while (*p1) {
+      sfprint("p1[%8] = %c  p2[%8] = %c\n", cnt, *p1, cnt, *p2);  
+      if (*p1 != *p2) {
+            return 0;
+        } else {
+            ++p1;
+            ++p2;
+            ++cnt;
+        }
+    }
+    sfprint("cst_strcmp: strings are equal\n");
+    return 1;
+}
+
 int custom_strlen(char *s) {
     int length = 0;
     while (s[length] != '\0') {
@@ -67,8 +93,9 @@ void print_ascii(char *buffer, size_t len){
     } 
 }
 
-char val2ascii(char val) {
+char val2ascii(uint8_t val) {
     switch (val) {
+        case 10: return '\n';
         case 32: return ' ';  
         case 33: return '!';  
         case 34: return '"';  

@@ -13,6 +13,7 @@
 #include "mem.h"
 #include "shell.h"
 #include "ata.h"
+#include "fat.h"
 
 
 
@@ -61,11 +62,12 @@ void kernel_main(void* mb_info) {
     thralloc_total();
     tfree(arr);
     thralloc_total();
-    cmd_dump_sector(19);
-    //read_root();
+    //cmd_dump_sector(33);
+    //read_sec(33);
     kbd_init(); 
     init_kbd_state();
     draw_prompt();
+    print_file("HELLO2.TXT", &shell);
     
     while (shell.running) {
         asm volatile("hlt");

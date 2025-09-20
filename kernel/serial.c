@@ -148,12 +148,11 @@ void format_sfprint(const char* fmt, va_list args) {
                 break;
             }
             case 'c': {
-                char val = va_arg(args, char);
-                char buff[2];
-                itoa(val, buff);    
-                serial_write(buff);
+                char val = (char)va_arg(args, int); // promoted to int
+                serial_write_char(val);
                 break;
             }
+
             
             case '%': {
                 serial_write_char('%'); // handle literal %%
