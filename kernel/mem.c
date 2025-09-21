@@ -27,7 +27,8 @@ void mem_init(){
 
 
 void* thralloc(size_t size) { // Alloc a block of mem from the heap of at least 'size' bytes
-sfprint("Allocating %8 bytes\n", size); 
+    size = (size + 15) & ~15;
+    sfprint("Allocating %8 bytes\n", size); 
     Chunk *current = free_head; //scan from the first free chunk 
     Chunk *prev = ((void *)0); // Keep track of the previous chunk (currently unused here, initialized to NULL)
     // Loop through linked list of chunks until out
@@ -40,13 +41,29 @@ sfprint("Allocating %8 bytes\n", size);
                 new_chunk->next = current->next; // Link new chunk into list after current chunk
                 current->size = size; // Shrink current chunk to the requested size
                 current->next = new_chunk; // Link current chunk to new chunk
+                if (new_chunk && (uintptr_t)new_chunk <= (uintptr_t)(current + 1)) {
+                    sfprint("Chunk overlap detected!\n");
+                }
             }
             current->is_free = 0; // Mark the current chunk as used
             return (void*)(current + 1); // Return a pointer to the memory just after the chunk header (usable space)
         }
         current = current->next; // Move to the next chunk in the list
     }
-    return (void*)0; // No suitable chunk found, return NULL
+    return NULL; // No suitable chunk found, return NULL
+}
+
+void* cralloc(size_t num, size_t size) {
+    size_t total = num * size;
+    void* ptr = thralloc(total);
+    if (!ptr) return NULL;
+
+    uint8_t* byte_ptr = (uint8_t*)ptr;
+    for (size_t i = 0; i < total; i++) {
+        byte_ptr[i] = 0;
+    }
+
+    return ptr;
 }
 
 
@@ -68,7 +85,7 @@ size_t thralloc_total() {
 
 
 void tfree(void *ptr) { // Free a previously allocated block
-    if (ptr == (void*)0) return; // Ignore NULL frees
+    if (ptr == NULL) return; // Ignore NULL frees
     Chunk *chunk = ((Chunk*)ptr) - 1; // Step back from the payload to get the chunk header
     sfprint("Freeing %8 bytes\n", chunk->size);
     chunk->is_free = 1; // Mark this chunk as free
@@ -81,7 +98,7 @@ void tfree(void *ptr) { // Free a previously allocated block
 
     // Coalesce with previous chunk if it's free
     Chunk *current = free_head;
-    Chunk *prev = (void*)0;
+    Chunk *prev = NULL;
     while (current && current != chunk) { // Walk list to find the chunk
         prev = current;
         current = current->next;
@@ -94,15 +111,6 @@ void tfree(void *ptr) { // Free a previously allocated block
 
 
 
-
-int cralloc(size_t size) {
-    Chunk *current = free_head;
-    Chunk *prev = ((void *)0);
-    while (current) {
-        if ((current->is_free) && (current->size >= size)) {
-        }
-    }
-}
 
 void add_region(uint64_t base, uint64_t length) {
     uint64_t start_page = base / 4096;

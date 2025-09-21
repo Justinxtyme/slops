@@ -51,23 +51,15 @@ void kernel_main(void* mb_info) {
     // Walk multiboot header to pull necessary data and  
     walk_mb2(mb_info);
 
-    //init_shell_lines(&shell);
-    //fb_draw_string("Hello framebuffer.... and world!", 0x00FFFFFF, 0x00000000);
-    //for (volatile int i = 0; i < 1000000000; ++i); // crude delay
     fb_clear(0x00000000);
     fb_cursor_reset();
     ShellContext shell = { .running = 1 };
     init_shell_lines(&shell);
-    int *arr = thralloc(1024);
-    thralloc_total();
-    tfree(arr);
-    thralloc_total();
-    //cmd_dump_sector(33);
-    //read_sec(33);
     kbd_init(); 
     init_kbd_state();
     draw_prompt();
-    print_file("HELLO2.TXT", &shell);
+    //fs_list_files();
+    //print_file("HELLO2.TXT", &shell);
     
     while (shell.running) {
         asm volatile("hlt");

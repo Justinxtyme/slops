@@ -17,4 +17,10 @@ int isprint(uint8_t c);
 
 char val2ascii(uint8_t val);
 
+_Bool space(char c);
+
+char *strdupe(const char *str);
+
+int str_eq(const char *a, const char *b);
+
 #endif

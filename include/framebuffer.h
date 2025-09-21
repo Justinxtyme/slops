@@ -11,6 +11,8 @@
 #define FG 0x00FFFFFF
 #define BG 0x00000000
 
+typedef struct ShellContext ShellContext;
+
 typedef struct {
     uint32_t x; // pixel position
     uint32_t y;
@@ -59,6 +61,12 @@ void fb_cursor_reset(void);
 
 void fb_clear(uint32_t bg_color);
 
+
+void fbprintf(const char* str, ...);
+
+char* format_fb_print(const char* fmt, va_list args);
+
+void fb_draw_stringsh(const char* str, uint32_t fg, uint32_t bg, struct ShellContext *shell);
 
 // On the backburner for now
 // void sfbprint(const char* str, ...);

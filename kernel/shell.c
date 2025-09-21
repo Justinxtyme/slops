@@ -8,7 +8,8 @@
 #include "types.h"
 //#include <ctype.h>
 #include <stddef.h>
-
+#include "fat.h"
+#include "parser.h"
 
 char linebuff[LINEBUFF_SIZE];
 size_t line_len = 0;
@@ -51,7 +52,19 @@ void clear_line(ShellContext *shell) {
     //cursor_pos = 0;
     draw_prompt();
 }
+void clear_line_no_prompt(ShellContext *shell) {
+    shell_cursor_reset(shell);
+    char spaces[256];
+    int max_chars = sizeof(spaces) - 1;
+    int count = max_chars - 1;
+    for (int i = 0; i < count; i++) spaces[i] = ' ';
+    spaces[count] = '\0';
 
+    fb_draw_string(spaces, FG, BG);
+    fb_cursor.x = 0;
+    //cursor_pos = 0;
+    //draw_prompt();
+}
 
 
 
@@ -84,7 +97,7 @@ void scroll_screen_up(ShellContext *shell) {
     }
 }
 
-static void clamp_n_scroll(ShellContext *shell) {
+void clamp_n_scroll(ShellContext *shell) {
     if (shell->shell_line >= max_lines) {
         scroll_screen_up(shell);
         shell->shell_line = max_lines - 1;
@@ -123,6 +136,7 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
         line_len = 0;
         cursor_pos = 0;
         process_cmd(shell, linebuff);
+        //process_input_segments(shell, linebuff);
         return 0;
 
     } else if (ascii == '\b' && line_len > 0) {
@@ -171,14 +185,14 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
     }
 }
 
-static int str_eq(const char *a, const char *b) {
-    while (*a && *b) {
-        if (*a != *b) return 0;
-        a++;
-        b++;
-    }
-    return (*a == '\0' && *b == '\0');
-}
+// static int str_eq(const char *a, const char *b) {
+//     while (*a && *b) {
+//         if (*a != *b) return 0;
+//         a++;
+//         b++;
+//     }
+//     return (*a == '\0' && *b == '\0');
+// }
 
 
 
@@ -198,14 +212,26 @@ int process_cmd(ShellContext *shell, char *cmd) {
         shell->running = 0;
         return 0;
     } else if (str_eq(cmd, "READ")) {
-
-
-    } else {
-        clear_line(shell);
-        shell->shell_line++;
-        fb_draw_string("command no beuno", FG, BG);
         return 0;
-    }
+
+    // } else if (str_eq(cmd, "LS") || str_eq(cmd, "ls")) {
+    //     clear_line_no_prompt(shell);
+    //     shell->shell_line++;
+    //     fs_list_files(shell);
+    //     return 0;
+    
+    // } else {
+        // clear_line(shell);
+        // shell->shell_line++;
+        // fb_draw_string("command no beuno", FG, BG);
+        // return 0;
+    // }
+    } else {
+        clear_line_no_prompt(shell);
+        shell->shell_line++;
+        process_input_segments(shell, linebuff);
+        return 0;
+       } 
 }
 
 

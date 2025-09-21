@@ -8,7 +8,7 @@
 #define INPUT_SIZE 1024
 #define LINEBUFF_SIZE 128
 
-typedef struct {
+typedef struct ShellContext {
     char input[INPUT_SIZE];   // User input buffer
     _Bool running;              // Shell loop control flag
     int shell_line;
@@ -23,6 +23,10 @@ typedef struct {
 } ShellContext;
 
 
+void clear_line_no_prompt(ShellContext *shell);
+
+void clear_line(ShellContext *shell);
+
 void draw_prompt(void);
 
 int process_scancode(ShellContext *shell, uint8_t scancode);
@@ -34,5 +38,7 @@ void init_shell_lines(ShellContext *shell);
 void shift_right(char* buf, size_t pos, size_t len);
 
 void shift_left(char* buf, size_t pos, size_t len);
+
+void clamp_n_scroll(ShellContext *shell);
 
 #endif

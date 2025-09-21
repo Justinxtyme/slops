@@ -9,7 +9,7 @@ GRUB_DIR    := $(BOOT_DIR)/grub
 ASM_SRC     := $(SRC_DIR)/entry.asm $(SRC_DIR)/isr.asm
 C_SRC       := $(SRC_DIR)/main.c $(SRC_DIR)/gdt.c $(SRC_DIR)/serial.c $(SRC_DIR)/idt.c $(SRC_DIR)/string.c \
                $(SRC_DIR)/framebuffer.c $(SRC_DIR)/font8x16.c $(SRC_DIR)/shell.c $(SRC_DIR)/mem.c $(SRC_DIR)/kbd.c \
-			   $(SRC_DIR)/ata.c $(SRC_DIR)/fat.c
+			   $(SRC_DIR)/ata.c $(SRC_DIR)/fat.c $(SRC_DIR)/parser.c $(SRC_DIR)/command.c
 
 VGA_SRC     := $(SRC_DIR)/vga.c
 LINKER      := $(SRC_DIR)/linker.ld
@@ -18,7 +18,7 @@ LINKER      := $(SRC_DIR)/linker.ld
 ASM_OBJ     := $(BUILD_DIR)/entry.o $(BUILD_DIR)/isr.o
 C_OBJ       := $(BUILD_DIR)/main.o $(BUILD_DIR)/gdt.o $(SRC_DIR)/serial.o $(SRC_DIR)/idt.o $(SRC_DIR)/string.o \
 			   $(SRC_DIR)/framebuffer.o $(SRC_DIR)/font8x16.o $(SRC_DIR)/shell.o $(SRC_DIR)/mem.o $(SRC_DIR)/kbd.o \
-			   $(SRC_DIR)/ata.o $(SRC_DIR)/fat.o
+			   $(SRC_DIR)/ata.o $(SRC_DIR)/fat.o $(SRC_DIR)/parser.o $(SRC_DIR)/command.o
 
 VGA_SRC     := $(SRC_DIR)/vga.c
 

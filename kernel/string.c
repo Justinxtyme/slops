@@ -1,6 +1,7 @@
 #include "string.h"
 #include <stdint.h>
 #include "types.h"
+#include "mem.h"
 
 int cst_strcmp(char *str1, char *str2) {
     int len1 = custom_strlen(str1);
@@ -24,8 +25,17 @@ int cst_strcmp(char *str1, char *str2) {
             ++cnt;
         }
     }
-    sfprint("cst_strcmp: strings are equal\n");
+    //sfprint("cst_strcmp: strings are equal\n");
     return 1;
+}
+
+int str_eq(const char *a, const char *b) {
+    while (*a && *b) {
+        if (*a != *b) return 0;
+        a++;
+        b++;
+    }
+    return (*a == '\0' && *b == '\0');
 }
 
 int custom_strlen(char *s) {
@@ -35,6 +45,31 @@ int custom_strlen(char *s) {
     }
     return length;
 }
+
+char* strdupe(const char* str) {
+    size_t len = custom_strlen(str);
+    char* dup = thralloc(len + 1); // or thrcalloc(len + 1, sizeof(char)) for zeroed
+    if (!dup) return NULL;
+
+    for (size_t i = 0; i < len; i++) {
+        dup[i] = str[i];
+    }
+    dup[len] = '\0';
+
+    return dup;
+}
+
+
+
+_Bool space(char c) {
+    //return ((char) & (" "));
+    if (c == " ") {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 
 // Function to reverse the string
 void reverse_string(char *str) {

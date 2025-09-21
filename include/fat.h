@@ -2,7 +2,9 @@
 #define FAT_H
 
 #include "types.h"
-#include "shell.h"
+//#include "shell.h"
+
+typedef struct ShellContext ShellContext;
 
 typedef struct {
     uint16_t bytes_per_sector;
@@ -49,5 +51,11 @@ uint16_t fat12_get_next_cluster(uint16_t cluster, const fat_bpb* bpb);
 int fs_read_file(const char* name83, uint8_t* out, size_t maxlen);
 
 int print_file(char *filename, ShellContext *shell);
+
+int fs_list_files(ShellContext *shell);
+
+int list_root(const fat_bpb* bpb, fat_dir_entry* out, ShellContext *shell);
+
+int list_dir_entry(const uint8_t* e, fat_dir_entry* out, ShellContext *shell);
 
 #endif

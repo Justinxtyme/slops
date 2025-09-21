@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include "framebuffer.h"
 #include "serial.h"
 #include "multiboot.h"
@@ -7,6 +8,9 @@
 #include "serial.h"
 #include "string.h"
 #include "vga.h"
+#include "shell.h"
+
+typedef struct ShellContext ShellContext;
 
 framebuffer_info_t framebuffer = {0}; // zero-init
 uint8_t* fbuff_base = 0;// = (uint8_t*)(uintptr_t)fb->framebuffer_addr;
@@ -88,13 +92,36 @@ void fb_draw_string(const char* str, uint32_t fg, uint32_t bg) {
         // Draw the character at the current cursor position
         fb_draw_char(fbuff_base, framebuffer.pitch,
                      fb_cursor.x, fb_cursor.y,
-                     str[i], fg, bg);
-
+                     str[i], fg, bg);  
         // Advance the cursor horizontally by one character width
         fb_cursor.x += FONT_WIDTH;
     }
 }
 
+//Trying to get shell line logic in sync with fb_draw,
+//reading any file that goes past avaiable lines in shell causes UB
+//NEED TO FIX 
+void fb_draw_stringsh(const char* str, uint32_t fg, uint32_t bg, struct ShellContext *shell) {
+    // Loop through each character in the input string
+    sfprint("drawing to x, y coord: %8, %8\n", fb_cursor.x, fb_cursor.y);
+    for (size_t i = 0; str[i]; ++i) {
+
+        // If the character is a newline, move cursor to start of next line
+        if (str[i] == '\n') {
+            fb_cursor.x = 0;                  // Reset horizontal position
+            fb_cursor.y += FONT_HEIGHT;
+            sfprint("str[i] y coord: %8\n", fb_cursor.y);       // Move down one line
+            continue;                         // Skip drawing this character
+        }
+        // Draw the character at the current cursor position
+        fb_draw_char(fbuff_base, framebuffer.pitch,
+                     fb_cursor.x, fb_cursor.y,
+                     str[i], fg, bg);
+        clamp_n_scroll(shell);    
+        // Advance the cursor horizontally by one character width
+        fb_cursor.x += FONT_WIDTH;
+    }
+}
 void fb_draw_string_with_cursor(const char* str, size_t cursor_pos, uint32_t fg, uint32_t bg, uint32_t cursor_fg, uint32_t cursor_bg) {
 
     for (size_t i = 0; str[i]; ++i) {
@@ -131,6 +158,103 @@ void fb_cursor_reset(void) {
     fb_cursor.x = 0;
     fb_cursor.y = 0;
 }
+
+
+char* format_fb_print(const char* fmt, va_list args) {
+    char* fbuff = thralloc(256); 
+    if (!fbuff) return NULL;
+
+    size_t i = 0;
+    const char *p = fmt;
+
+    while (*p && i < 255) {
+        if (*p != '%') {
+            fbuff[i++] = *p++;
+            continue;
+        }
+
+        p++; // skip '%'
+        if (*p == '\0') break;
+
+        switch (*p) {
+            case 'd': {
+                int val = va_arg(args, int);
+                char buff[32];
+                itoa(val, buff);
+                for (size_t cnt = 0; buff[cnt] && i < 255; cnt++) {
+                    fbuff[i++] = buff[cnt];
+                }
+                break;
+            }
+            case '8': {
+                uint64_t val = va_arg(args, uint64_t);
+                char buff[32];
+                llitoa(val, buff);
+                for (size_t cnt = 0; buff[cnt] && i < 255; cnt++) {
+                    fbuff[i++] = buff[cnt];
+                }
+                break;
+            }
+            case 's': {
+                const char *sval = va_arg(args, const char*);
+                for (size_t cnt = 0; sval[cnt] && i < 255; cnt++) {
+                    fbuff[i++] = sval[cnt];
+                }
+                break;
+            }
+            case 'x': {
+                uint32_t val = va_arg(args, uint32_t);
+                char buff[32];
+                u32tohex(val, buff);
+                for (size_t cnt = 0; buff[cnt] && i < 255; cnt++) {
+                    fbuff[i++] = buff[cnt];
+                }
+                break;
+            }
+            case 'h': {
+                uint8_t val = va_arg(args, int);
+                char buff[3];
+                u8tohex(val, buff);
+                for (size_t cnt = 0; buff[cnt] && i < 255; cnt++) {
+                    fbuff[i++] = buff[cnt];
+                }
+                break;
+            }
+            case 'c': {
+                char val = (char)va_arg(args, int);
+                fbuff[i++] = val;
+                break;
+            }
+            case '%': {
+                fbuff[i++] = '%';
+                break;
+            }
+            default: {
+                fbuff[i++] = '?';
+                break;
+            }
+        }
+
+        p++;
+    }
+
+    fbuff[i] = '\0';
+    return fbuff;
+}
+
+void fbprintf(const char* str, ...) {
+    va_list args;
+    va_start(args, str);
+    char *fbuff = format_fb_print(str, args);
+    va_end(args);
+
+    if (fbuff) {
+        fb_draw_string(fbuff, FG, BG);
+        tfree(fbuff); // free after use
+    }
+}
+
+
 
 
 

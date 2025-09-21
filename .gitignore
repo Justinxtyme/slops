@@ -53,3 +53,5 @@ ITER.TXT
 iter.txt
 PANCAKES.TXT
 PCAKE.TXT
+kernel/command.o
+kernel/parser.o
