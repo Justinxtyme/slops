@@ -1,51 +1,76 @@
 global isr_common_stub
 extern isr_handler
 
-; Common stub preserves state and calls isr_handler(rdi=vec, rsi=err, rdx=rip)
-isr_common_stub:
-    ; Save volatile we’ll clobber (don’t touch rdi/rsi/rdx – they are args)
-    push r11
-    push r10
-    push r9
-    push r8
-    push rcx
-    push rax
-
-    ; Align stack for SysV: at call, (rsp % 16) == 8
-    sub rsp, 8
-    call isr_handler
-    add rsp, 8
-
-    ; Restore
-    pop rax
-    pop rcx
-    pop r8
-    pop r9
-    pop r10
-    pop r11
-
-    ; Return to interrupted context
-    iretq
-
+; For no-error vectors, push a synthetic 0 error code to unify layout
 %macro ISR_NOERR 1
 global isr%1
 isr%1:
-    ; rdi=vector, rsi=0, rdx = RIP at [rsp]
-    mov rdi, %1
-    xor rsi, rsi
-    mov rdx, [rsp]          ; RIP (top of frame)
+    push qword 0             ; err = 0
+    push qword %1            ; vec
     jmp isr_common_stub
 %endmacro
 
+; For error-code vectors, CPU already pushed err; we push vec to unify
 %macro ISR_ERR 1
 global isr%1
 isr%1:
-    ; rdi=vector, rsi=error at [rsp], rdx = RIP at [rsp+8]
-    mov rdi, %1
-    mov rsi, [rsp]          ; error code pushed by CPU
-    mov rdx, [rsp+8]        ; RIP (next qword)
+    push qword %1            ; vec
     jmp isr_common_stub
 %endmacro
+
+; Common stub: build frame, call C, restore, iretq
+isr_common_stub:
+    ; Save all GPRs (callee and caller saved)
+    push rax
+    push rbx
+    push rcx
+    push rdx
+    push rbp
+    push rdi
+    push rsi
+    push r8
+    push r9
+    push r10
+    push r11
+    push r12
+    push r13
+    push r14
+    push r15
+
+    ; RSP alignment:
+    ; On interrupt entry, RSP ≡ +8 mod 16 relative to interrupted context.
+    ; We just pushed 15 regs = 120 bytes (≡ 8 mod 16). Plus the 2 qwords we pushed
+    ; before (err/vec) = 16 bytes total (≡ 0). Net so far: +8. That leaves RSP ≡ 8 mod 16.
+    ; Perfect for a CALL (CALL pushes 8 to make callee entry 16-aligned).
+    ; So do NOT sub rsp, 8.
+
+    ; Pass pointer to our frame to C in RDI
+    mov rdi, rsp
+
+    call isr_handler
+
+    ; Restore all GPRs in reverse
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rsi
+    pop rdi
+    pop rbp
+    pop rdx
+    pop rcx
+    pop rbx
+    pop rax
+
+    ; Pop vec and err we pushed (or err+vec depending on path)
+    add rsp, 16
+
+    iretq
+
 
 ; 0..31
 ISR_NOERR 0

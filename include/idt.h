@@ -16,6 +16,19 @@ struct idt_entry {
     uint32_t zero;           // reserved
 } __attribute__((packed));
 
+typedef struct {
+    uint64_t r15, r14, r13, r12, r11, r10, r9, r8;
+    uint64_t rsi, rdi, rbp, rdx, rcx, rbx, rax;
+    uint64_t vec;       // our push
+    uint64_t err;       // CPU or 0
+    uint64_t rip;       // CPU
+    uint64_t cs;        // CPU
+    uint64_t rflags;    // CPU
+    uint64_t rsp;       // CPU if CPL change
+    uint64_t ss;        // CPU if CPL change
+} isr_frame_t;
+
+
 struct idt_ptr {
     uint16_t limit;
     uint64_t base;
@@ -34,15 +47,15 @@ int set_idt_entry(int vec, void* handler, uint16_t selector, uint8_t type_attr);
 
 int set_all_idt(void);
 
-void isr_handler(uint64_t vec, uint64_t err, uint64_t rip);
+void isr_handler(isr_frame_t *f);
 
 void remap_pic(void);
 
 void enable_irq(void);
 
-void irq0_handler(uint64_t vec, uint64_t err, uint64_t rip);
+void irq0_handler(isr_frame_t *f);
 
-void irq1_handler(uint64_t vec, uint64_t err, uint64_t rip);
+void irq1_handler(isr_frame_t *f);
 
 void trigger_ud(void);
  

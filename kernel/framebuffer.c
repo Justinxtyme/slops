@@ -17,6 +17,8 @@ uint8_t* fbuff_base = 0;// = (uint8_t*)(uintptr_t)fb->framebuffer_addr;
 
 fb_cursor_t fb_cursor = {0, 0}; // start at top-left
 
+typedef struct ShellContext ShellContext;
+
 const struct multiboot_tag_mmap* memb;
 
 #define VGA_COLS  80
@@ -79,14 +81,14 @@ void fb_draw_char(uint8_t* fb, uint32_t pitch,
 
 void fb_draw_string(const char* str, uint32_t fg, uint32_t bg) {
     // Loop through each character in the input string
-    sfprint("drawing to x, y coord: %8, %8\n", fb_cursor.x, fb_cursor.y);
+    //sfprint("drawing to x, y coord: %8, %8\n", fb_cursor.x, fb_cursor.y);
     for (size_t i = 0; str[i]; ++i) {
 
         // If the character is a newline, move cursor to start of next line
         if (str[i] == '\n') {
             fb_cursor.x = 0;                  // Reset horizontal position
             fb_cursor.y += FONT_HEIGHT;
-            sfprint("str[i] y coord: %8\n", fb_cursor.y);       // Move down one line
+            //sfprint("str[%8] y coord: %8\n", i, fb_cursor.y);       // Move down one line
             continue;                         // Skip drawing this character
         }
         // Draw the character at the current cursor position
@@ -101,27 +103,39 @@ void fb_draw_string(const char* str, uint32_t fg, uint32_t bg) {
 //Trying to get shell line logic in sync with fb_draw,
 //reading any file that goes past avaiable lines in shell causes UB
 //NEED TO FIX 
-void fb_draw_stringsh(const char* str, uint32_t fg, uint32_t bg, struct ShellContext *shell) {
-    // Loop through each character in the input string
-    sfprint("drawing to x, y coord: %8, %8\n", fb_cursor.x, fb_cursor.y);
-    for (size_t i = 0; str[i]; ++i) {
+// void fb_draw_stringsh(const char* str, int len, uint32_t fg, uint32_t bg, struct ShellContext *shell) {
+//     for (size_t i = 0; str[i]; ++i) {
+//         char c = str[i];
 
-        // If the character is a newline, move cursor to start of next line
-        if (str[i] == '\n') {
-            fb_cursor.x = 0;                  // Reset horizontal position
-            fb_cursor.y += FONT_HEIGHT;
-            sfprint("str[i] y coord: %8\n", fb_cursor.y);       // Move down one line
-            continue;                         // Skip drawing this character
-        }
-        // Draw the character at the current cursor position
-        fb_draw_char(fbuff_base, framebuffer.pitch,
-                     fb_cursor.x, fb_cursor.y,
-                     str[i], fg, bg);
-        clamp_n_scroll(shell);    
-        // Advance the cursor horizontally by one character width
-        fb_cursor.x += FONT_WIDTH;
-    }
-}
+//         if (c == '\n') {
+//             shell->shell_line++;
+//             clamp_n_scroll(shell); // scroll if needed
+//             fb_cursor.x = 0;
+//             fb_cursor.y = shell->shell_line * FONT_HEIGHT;
+//             continue;
+//         }
+
+//         fb_draw_char(fbuff_base, framebuffer.pitch,
+//                      fb_cursor.x, fb_cursor.y,
+//                      c, fg, bg);
+
+//         fb_cursor.x += FONT_WIDTH;
+
+//         // Wrap if line exceeds screen width
+//         if (fb_cursor.x >= framebuffer.width) {
+//             fb_cursor.x = 0;
+//             shell->shell_line++;
+//             clamp_n_scroll(shell);
+//             fb_cursor.y = shell->shell_line * FONT_HEIGHT;
+//         }
+//     }
+//     if (str[len] != '\n') {
+//         shell->shell_line++;
+//         clamp_n_scroll(shell);
+//     }
+//     line_history[history_count++] = str;
+// }
+
 void fb_draw_string_with_cursor(const char* str, size_t cursor_pos, uint32_t fg, uint32_t bg, uint32_t cursor_fg, uint32_t cursor_bg) {
 
     for (size_t i = 0; str[i]; ++i) {

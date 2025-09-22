@@ -3,6 +3,7 @@
 #include "shell.h"
 #include "serial.h"
 #include <stdbool.h>
+#include "assertf.h"
 
 #define KBD_DATA_PORT   0x60
 #define KBD_STATUS_PORT 0x64
@@ -92,8 +93,8 @@ bool symbol_shift(void) {
 // takes a scan code and processes it into its proper ascii based 
 //on keyboard state
 uint8_t scancode2ascii(uint8_t key) {
-    sfprint("Key = %8\n", key);
-    uint8_t out;
+    //sfprint("Key = %8\n", key);
+    uint8_t out = 255;
     switch (key) {
         case 1:
             // ESC
@@ -644,7 +645,6 @@ uint8_t scancode2ascii(uint8_t key) {
             // }
             break;
         }
-    
     
     //sfprint("OUT:Shift LR = %8, %8\n", kbd.lshift, kbd.rshift);
     return out;

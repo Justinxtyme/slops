@@ -103,7 +103,7 @@ int list_dir_entry(const uint8_t* e, fat_dir_entry* out, ShellContext *shell) {
     // e[11] == 0x0F → long file name (LFN) entry, not a short 8.3 entry
     // e[0] == 0xE5 → deleted entry
     if (e[0] == 0x00 || e[11] == 0x0F || e[0] == 0xE5) {
-        sfprint("skipped entry\n");
+        //sfprint("skipped entry\n");
         return 0;
     }
     // Extract the 8-character name field (offset 0x00–0x07)
@@ -145,9 +145,12 @@ int list_dir_entry(const uint8_t* e, fat_dir_entry* out, ShellContext *shell) {
         full[name_len] = '\0';
     }
     sfprint("%s\n", full);
-    fb_draw_string(full, FG, BG);
-    fb_draw_string("\n", FG, BG);
-    shell->shell_line++;
+    int new_len = custom_strlen(full);
+    clamp_n_scroll(shell);
+    fb_draw_stringsh(full, new_len, FG, BG, shell);
+    fb_draw_stringsh("\n", 1, FG, BG, shell);
+    // shell->shell_line++;
+    // clamp_n_scroll(shell);
     return 1;
 }
 
@@ -311,23 +314,45 @@ int fs_list_files(ShellContext *shell) {
     return 0;
 }
 
+// int print_file(char *filename, ShellContext *shell) {
+//     uint8_t buffer[4096];
+//     int len = fs_read_file(filename, buffer, sizeof(buffer));
+//     if (len > 0) {
+//         buffer[len] = '\0'; // if it's text
+//         sfprint("\n%s\n%s\n", filename, buffer);
+//         fb_draw_string("\n", 0x00FFFFFF, 0x00000000);
+//         shell->shell_line++;
+//         fb_draw_stringsh(buffer, 0x00FFFFFF, 0x00000000, shell);
+//         for (int i = 0; i < len; i++) {
+//             if (buffer[i] == '\n') {
+//                 shell->shell_line++;
+//             }
+//         }
+//         sfprint("shell line: %d", shell->shell_line);
+//     } else {
+//         sfprint("No data detected in %c", filename);
+//     }
+//     return 0;
+// }
+
 int print_file(char *filename, ShellContext *shell) {
     uint8_t buffer[4096];
     int len = fs_read_file(filename, buffer, sizeof(buffer));
     if (len > 0) {
-        buffer[len] = '\0'; // if it's text
-        sfprint("\n%s\n%s\n", filename, buffer);
-        fb_draw_string("\n", 0x00FFFFFF, 0x00000000);
-        shell->shell_line++;
-        fb_draw_stringsh(buffer, 0x00FFFFFF, 0x00000000, shell);
-        for (int i = 0; i < len; i++) {
-            if (buffer[i] == '\n') {
-                shell->shell_line++;
-            }
-        }
-        sfprint("shell line: %d", shell->shell_line);
+        buffer[len] = '\0';
+        //fb_draw_string("\n", FG, BG);
+        // shell->shell_line++;
+        // clamp_n_scroll(shell);
+        fb_cursor.x = 0;
+        fb_cursor.y = shell->shell_line * FONT_HEIGHT;
+
+        //fb_draw_string(buffer, FG, BG);
+        fb_draw_stringsh(buffer, len, FG, BG, shell);
+        // shell->shell_line++;
+        // clamp_n_scroll(shell);
     } else {
-        sfprint("No data detected in %c", filename);
+        fb_draw_stringsh("No data detected\n", 17, FG, BG, shell);
+        
     }
     return 0;
 }

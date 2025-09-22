@@ -48,10 +48,6 @@ void fb_draw_char(uint8_t* fb, uint32_t pitch,
                   char c, uint32_t fg, uint32_t bg);
 
 
-// void fb_draw_string(uint8_t* fb, uint32_t pitch,
-//                     uint32_t x, uint32_t y,
-//                     const char* s, uint32_t fg, uint32_t bg);
-
 void fb_draw_string(const char* str, uint32_t fg, uint32_t bg);
 
 void fb_draw_string_with_cursor(const char* str, size_t cursor_pos, uint32_t fg,
@@ -66,7 +62,7 @@ void fbprintf(const char* str, ...);
 
 char* format_fb_print(const char* fmt, va_list args);
 
-void fb_draw_stringsh(const char* str, uint32_t fg, uint32_t bg, struct ShellContext *shell);
+void fb_draw_stringsh(const char* str, int len, uint32_t fg, uint32_t bg, struct ShellContext *shell);
 
 // On the backburner for now
 // void sfbprint(const char* str, ...);

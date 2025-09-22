@@ -50,6 +50,7 @@ void* thralloc(size_t size) { // Alloc a block of mem from the heap of at least 
         }
         current = current->next; // Move to the next chunk in the list
     }
+    thralloc_total();
     return NULL; // No suitable chunk found, return NULL
 }
 
@@ -62,7 +63,7 @@ void* cralloc(size_t num, size_t size) {
     for (size_t i = 0; i < total; i++) {
         byte_ptr[i] = 0;
     }
-
+    thralloc_total();
     return ptr;
 }
 
@@ -107,6 +108,7 @@ void tfree(void *ptr) { // Free a previously allocated block
         prev->size += sizeof(Chunk) + chunk->size; // Merge into previous
         prev->next = chunk->next; // Skip over current chunk
     }
+    thralloc_total();
 }
 
 

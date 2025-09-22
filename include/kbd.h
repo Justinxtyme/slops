@@ -5,7 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define KBDBUFFSIZE 128
+#define KBDBUFFSIZE 256
+#define KBDBUF_MASK (KBDBUFFSIZE - 1)
 
 
 typedef struct KbdState {
@@ -22,11 +23,11 @@ typedef struct KbdState {
 
 
 typedef struct {
-    uint8_t head;
-    uint8_t tail;
+    volatile uint16_t head;       // producer writes
+    volatile uint16_t tail;       // consumer writes
     uint8_t scancodes[KBDBUFFSIZE];
-    
 } kbuff_t;
+
 
 uint8_t scancode2ascii(uint8_t key);
 

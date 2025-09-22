@@ -1,8 +1,7 @@
 #include "idt.h"
-
 #include "kbd.h"
-
 #include "shell.h"
+#include "assertf.h"
 #include <stdint.h>
 
 typedef unsigned long size_t;
@@ -17,24 +16,48 @@ struct idt_ptr idtr = {
 struct idt_entry idt[256];
 
 //INIT STRUCT FOR KEYBOARD RING BUFFER
-kbuff_t kbuff = {0};
+static kbuff_t kbuff = {0};
 
 
+static inline void irq_disable(void){ __asm__ __volatile__("cli"); }
+static inline void irq_enable(void){ __asm__ __volatile__("sti"); }
 
 int read_sc(ShellContext *shell) {
-    if (kbuff.tail == kbuff.head) return 0; //  buffer is empty
-    while (kbuff.tail != kbuff.head) {
-        //sfprint("Reading sc: %8\n", kbuff.tail);
-        uint8_t sc = kbuff.scancodes[kbuff.tail]; // pull scan code from tail.
-        kbuff.tail = (kbuff.tail + 1) % KBDBUFFSIZE; // move tail up, safely wrapping if > buff size;
-        //sfprint("Tail is now: %8\n", kbuff.tail);
-        // if (sc & 0x80) {
-        //     continue;
-        // }
-        process_scancode(shell, sc);
-    } 
-    return 0;   
+    irq_disable();
+    uint16_t head_snapshot = kbuff.head;
+    irq_enable();
+
+    while (1) {
+        irq_disable();
+        uint16_t tail = kbuff.tail;
+        if (tail == head_snapshot) { irq_enable(); break; }
+        uint8_t sc = kbuff.scancodes[tail & KBDBUF_MASK];
+        kbuff.tail = tail + 1;
+        irq_enable();
+
+        process_scancode(shell, sc); // may draw, safe with IRQs on
+    }
+    uint32_t used = kbuff.head - kbuff.tail;
+    assertf(used <= KBDBUFFSIZE);
+    return 0;
 }
+
+
+
+// int read_sc(ShellContext *shell) {
+//     if (kbuff.tail == kbuff.head) return 0; //  buffer is empty
+//     while (kbuff.tail != kbuff.head) {
+//         //sfprint("Reading sc: %8\n", kbuff.tail);
+//         uint8_t sc = kbuff.scancodes[kbuff.tail]; // pull scan code from tail.
+//         kbuff.tail = (kbuff.tail + 1) % KBDBUFFSIZE; // move tail up, safely wrapping if > buff size;
+//         //sfprint("Tail is now: %8\n", kbuff.tail);
+//         // if (sc & 0x80) {
+//         //     continue;
+//         // }
+//         process_scancode(shell, sc);
+//     } 
+//     return 0;   
+// }
 
 void zero_idt(void) {
     struct idt_entry* e = idt;
@@ -131,25 +154,43 @@ static void dump_pf_reason(uint64_t err) {
         (err >> 4) & 1);
 }
 
-void isr_handler(uint64_t vec, uint64_t err, uint64_t rip) {
+
+void isr_handler(isr_frame_t* f) {
+    switch (f->vec) {
+        case 14: {
+            uint64_t cr2 = read_cr2();
+            dump_pf_reason(f->err);
+            break;
+        }
+        case 32: irq0_handler(f); break;
+        case 33: irq1_handler(f); break;
+        default: break;
+    }
+    uint32_t used = kbuff.head - kbuff.tail;
+    assertf(used <= KBDBUFFSIZE);
+
+}
+
+
+// void isr_handler(uint64_t vec, uint64_t err, uint64_t rip) {
   
     
-    if (vec == 14) {
-        uint64_t cr2 = read_cr2();
-        //sfprint("CR2 (fault addr): %8\n", cr2);
-        dump_pf_reason(err);
-    }
-    if (vec == 32) {
-        irq0_handler(vec, err, rip);
-    }
-    if (vec == 33) {
-        //sfprint("Interrupt: %8\n", vec);
-        //sfprint("RIP: %8\n", rip);
-        //sfprint("Error code: %8\n", err);
-        irq1_handler(vec, err, rip);
-    }
-    //for (;;) __asm__ volatile ("hlt");
-}
+//     if (vec == 14) {
+//         uint64_t cr2 = read_cr2();
+//         //sfprint("CR2 (fault addr): %8\n", cr2);
+//         dump_pf_reason(err);
+//     }
+//     if (vec == 32) {
+//         irq0_handler(vec, err, rip);
+//     }
+//     if (vec == 33) {
+//         //sfprint("Interrupt: %8\n", vec);
+//         //sfprint("RIP: %8\n", rip);
+//         //sfprint("Error code: %8\n", err);
+//         irq1_handler(vec, err, rip);
+//     }
+//     //for (;;) __asm__ volatile ("hlt");
+// }
 
 
 
@@ -164,22 +205,40 @@ void remap_pic(void) {
     outb(0xA1, 0x01); // slave PIC: 8086 mode
 }
 
-void irq0_handler(uint64_t vec, uint64_t err, uint64_t rip) {
+void irq0_handler(isr_frame_t *f) {
     // Send EOI to PIC
     outb(0x20, 0x20);
 }
 
-//handle keyboard input
-void irq1_handler(uint64_t vec, uint64_t err, uint64_t rip) {
-    uint8_t scancode = inb(0x60); // read from keyboard data port
-    sfprint("keyboard input detected. Scan code: %8\n", scancode);
-    kbuff.scancodes[kbuff.head] = scancode;
-    sfprint("Scan code after store: %8\n", kbuff.scancodes[kbuff.head]);
-    kbuff.head = (kbuff.head + 1) % KBDBUFFSIZE;
+void irq1_handler(isr_frame_t *f) {
+    uint8_t scancode = inb(0x60);
 
-    // decode scancode or buffer it
-    outb(0x20, 0x20); // send EOI to PIC
+    // Optional overrun check (drop newest or oldest)
+    uint16_t h = kbuff.head;
+    uint16_t t = kbuff.tail;
+    if (((h + 1) & 0xFFFF) == t + KBDBUFFSIZE) {
+        // buffer full — decide policy: drop this scancode or advance tail
+        // kbuff.tail = t + 1; // drop oldest
+    }
+
+    kbuff.scancodes[h & KBDBUF_MASK] = scancode;
+    kbuff.head = h + 1;
+
+    outb(0x20, 0x20); // EOI
 }
+
+
+// //handle keyboard input
+// void irq1_handler(uint64_t vec, uint64_t err, uint64_t rip) {
+//     uint8_t scancode = inb(0x60); // read from keyboard data port
+//     //sfprint("keyboard input detected. Scan code: %8\n", scancode);
+//     kbuff.scancodes[kbuff.head] = scancode;
+//     //sfprint("Scan code after store: %8\n", kbuff.scancodes[kbuff.head]);
+//     kbuff.head = (kbuff.head + 1) % KBDBUFFSIZE;
+
+//     // decode scancode or buffer it
+//     outb(0x20, 0x20); // send EOI to PIC
+// }
 
 
 

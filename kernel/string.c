@@ -8,7 +8,7 @@ int cst_strcmp(char *str1, char *str2) {
     int len2 = custom_strlen(str2);
     
     if (len1 != len2) {
-       sfprint("cst_strcmp: strings are not equal\n");
+       //sfprint("cst_strcmp: strings are not equal\n");
        return 0;
     }
     

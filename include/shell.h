@@ -7,11 +7,15 @@
 
 #define INPUT_SIZE 1024
 #define LINEBUFF_SIZE 128
+#define MAX_HISTORY_LINES 1024
 
 typedef struct ShellContext {
     char input[INPUT_SIZE];   // User input buffer
     _Bool running;              // Shell loop control flag
     int shell_line;
+    int scroll_offset;
+    int history_count;
+    char *line_history[MAX_HISTORY_LINES];
     // int  last_status; // Last command exit status
     // int   tty_fd; // Terminal file descriptor
     // pid_t shell_pgid; // Shell process group ID

@@ -1,9 +1,11 @@
 #include "command.h"
 #include "mem.h"
+#include "serial.h"
 //-----------------------------------------------------------------------------
 //                       FREE  ROUTINES
 //-----------------------------------------------------------------------------
 void free_command_list(Command **cmds, int num_cmds) {
+    sfprint("freeing command list\n");
     if (!cmds) return;
     for (int i = 0; i < num_cmds; ++i) {
         Command *cmd = cmds[i];
@@ -17,6 +19,7 @@ void free_command_list(Command **cmds, int num_cmds) {
         }
     }
     tfree(cmds);
+    sfprint("Command list freed\n");
 }
 
 void free_command(Command *cmd) {

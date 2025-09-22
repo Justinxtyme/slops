@@ -61,17 +61,11 @@ void kernel_main(void* mb_info) {
     //fs_list_files();
     //print_file("HELLO2.TXT", &shell);
     
-    while (shell.running) {
-        asm volatile("hlt");
-        asm volatile("cli");
-        //fb_draw_string("J", 0x00FFFFFF, 0x00000000);
-        //sfprint(".");
-        //fb_clear(0x00000000);
-        read_sc(&shell);
-        //for (volatile int i = 0; i < 100000; ++i); // crude delay
-        //fb_clear(0x00000000);
-        asm volatile("sti");
+    for (;;) {
+        __asm__ __volatile__("sti; hlt"); // enable interrupts, sleep until IRQ
+        read_sc(&shell);                  // drain after wake
     }
+
 
     asm volatile("cli; hlt");
 

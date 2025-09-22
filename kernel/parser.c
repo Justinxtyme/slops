@@ -221,11 +221,12 @@ void process_input_segments(ShellContext *shell, const char *expanded_input) {
     sfprint("processing input\n");
     char **segments = split_on_semicolons(expanded_input);
     if (!segments) return;
-
+    Command **cmds;
+    int num_cmds = 0;    
     for (int i = 0; segments[i]; ++i) {
-        int num_cmds = 0;
-        Command **cmds = parse_commands(segments[i], &num_cmds);
-        //LOG(LOG_LEVEL_INFO, "parse_commands returned %d commands", num_cmds);
+        num_cmds = 0;
+        cmds = parse_commands(segments[i], &num_cmds);
+        sfprint("parse_commands returned %d command(s)\n", num_cmds);
 
         // Validate command list before doing anything
         bool valid = true;
@@ -234,12 +235,12 @@ void process_input_segments(ShellContext *shell, const char *expanded_input) {
         } else {
             for (int j = 0; j < num_cmds; ++j) {
                 if (!cmds[j]) {
-                    //LOG(LOG_LEVEL_ERR, "cmds[%d] is NULL", j);
+                    sfprint("cmds[%d] is NULL", j);
                     valid = false;
                     break;
                 }
                 if (!cmds[j]->argv || !cmds[j]->argv[0]) {
-                   // LOG(LOG_LEVEL_ERR, "cmds[%d] has invalid argv", j);
+                   sfprint("cmds[%d] has invalid argv", j);
                     valid = false;
                     break;
                 }
@@ -252,42 +253,45 @@ void process_input_segments(ShellContext *shell, const char *expanded_input) {
         }
         const char *cmd_name = cmds[0]->argv[0];
 
-        sfprint("%s\n", cmd_name);
+        sfprint("command: %s\n", cmd_name);
         //Built-in: exit
         if (cst_strcmp(cmd_name, "exit") || cst_strcmp(cmd_name, "quit") || cst_strcmp(cmd_name, "q")) {
-            sfprint("exit command detected\n");
+            draw_prompt();
+            fb_draw_string("Quitting", FG, BG);
             shell->running = 0;
             free_command_list(cmds, num_cmds);
-            tfree(segments);
+            free_segments(segments);
+            asm volatile("cli; hlt");
             break;
         }
-        if (str_eq(cmd_name, "LS") || str_eq(cmd_name, "ls")) {
+        else if (str_eq(cmd_name, "LS") || str_eq(cmd_name, "ls")) {
             clear_line_no_prompt(shell);
-            //shell->shell_line++;
+            shell->shell_line++;
             fs_list_files(shell);
+            //free_command_list(cmds, num_cmds);
             break;
         }
-        if (str_eq(cmd_name, "cat") || str_eq(cmd_name, "CAT")) {
+        else if (str_eq(cmd_name, "cat") || str_eq(cmd_name, "CAT")) {
             
             if (cmds[0]->argv[1]) {
                 clear_line_no_prompt(shell);
                 //shell->shell_line++;
                 print_file(cmds[0]->argv[1], shell);
+                //free_command_list(cmds, num_cmds);
                 break;
             }
+        } else { 
+            draw_prompt();
+            fbprintf("command: '%s' es no bueno", cmd_name);
+            fb_draw_string("\n", FG, BG);
+            draw_prompt();
+            //free_command_list(cmds, num_cmds);
         }
-        //process_cmd(shell, cmd_name);
-        //clear_line(shell);
-        //shell->shell_line++;
-        sfprint("Atttempting format fb print");
-        fbprintf("command: '%s' no beuno", cmd_name);
-        fb_draw_string("\n", FG, BG);
-        //shell->shell_line++;
-
-    free_command_list(cmds, num_cmds);
     }
     sfprint("freeing segments\n");
     free_segments(segments);
+    free_command_list(cmds, num_cmds);
+    clear_line(shell);
 }
 
 // Note: whitespace trimming deferred to parse_commands()
