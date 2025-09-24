@@ -64,111 +64,6 @@ Command **parse_commands(const char *input, int *num_cmds) {
             p++;
             continue;
         }
-        // // 3) Pipe: end current command, start next
-        // if (c == '|' && !in_single && !in_double) {
-        //     // flush any pending word
-        //     if (buff_index > 0) {
-        //         token_buff[buff_index] = '\0';
-        //         if (arg_index < MAX_ARGS - 1) {
-        //             current->argv[arg_index++] = strdup(token_buff);
-        //         }
-        //         buff_index = 0;
-        //     }
-
-        //     // terminate current->argv
-        //     current->argv[arg_index] = NULL;
-        //     current->argc = arg_index;
-
-        //     // store command
-        //     if (cmd_index < MAX_CMDS) {
-        //         cmds[cmd_index++] = current;
-        //     } else {
-        //         //LOG(LOG_LEVEL_ERR, "Too many commands, discarding extra");
-        //         free_command(current);
-        //         aborted = true;
-        //         break;
-        //     }
-
-        //     // allocate next Command
-        //     current = cralloc(1, sizeof(Command));
-        //     if (!current) { aborted = true; break; }
-        //     current->argv = cralloc(MAX_ARGS, sizeof(char *));
-        //     if (!current->argv) { tfree(current); aborted = true; break; }
-
-        //     arg_index = 0;
-        //     p++;
-        //     continue;
-        // }
-
-        // // 4) Redirection: >, >>, <
-        // if ((c == '>' || c == '<') && !in_single && !in_double) {
-        //     char chevron = c;
-        //     bool is_append = (c == '>' && p[1] == '>');
-        //     int specified_fd = -1;
-
-        //     // If the token buffer is all digits, consume it as a FD spec
-        //     if (buff_index > 0) {
-        //         bool all_digits = true;
-        //         for (int i = 0; i < buff_index; i++) {
-        //             if (token_buff[i] < '0' || token_buff[i] > '9') {
-        //                 all_digits = false;
-        //                 break;
-        //             }
-        //         }
-        //         if (all_digits) {
-        //             specified_fd = atoi(token_buff);
-        //             buff_index = 0;
-        //         } else {
-        //             // flush it as a real argv word
-        //             token_buff[buff_index] = '\0';
-        //             if (arg_index < MAX_ARGS - 1) {
-        //                 current->argv[arg_index++] = strdup(token_buff);
-        //             }
-        //             buff_index = 0;
-        //         }
-        //     }
-
-        //     // skip the chevron(s)
-        //     p += is_append ? 2 : 1;
-
-        //     // skip spaces before filename
-        //     while (*p && isspace((unsigned char)*p)) p++;
-
-        //     // parse the filename (respecting quotes)
-        //     buff_index = 0;
-        //     while (*p && (!isspace((unsigned char)*p) || in_single || in_double)) {
-        //         if (*p == '\'' && !in_double) {
-        //             in_single = !in_single;
-        //             p++;
-        //         } else if (*p == '"' && !in_single) {
-        //             in_double = !in_double;
-        //             p++;
-        //         } else {
-        //             if (buff_index < (int)sizeof(token_buff) - 1) {
-        //                 token_buff[buff_index++] = *p;
-        //             }
-        //             p++;
-        //         }
-        //     }
-        //     token_buff[buff_index] = '\0';
-        //     char *filename = strdup(token_buff);
-        //     buff_index = 0;
-
-        //     // assign to input/output as appropriate
-        //     if (chevron == '<') {
-        //         current->input_file = filename;
-        //         current->input_fd = (specified_fd != -1) ? specified_fd : 0;
-        //     } else if (chevron == '>' && is_append) {
-        //         current->append_file = filename;
-        //         current->output_fd = (specified_fd != -1) ? specified_fd : 1;
-        //     } else {
-        //         current->output_file = filename;
-        //         current->output_fd = (specified_fd != -1) ? specified_fd : 1;
-        //     }
-
-        //     // do not push filename to argv
-        //     continue;
-        // }
 
         // 5) Whitespace: flush token
         if ((c == ' ') && !in_single && !in_double) {
@@ -220,14 +115,25 @@ processes expanded input, splitting at semicolons for */
 void process_input_segments(ShellContext *shell, const char *expanded_input) {
     sfprint("processing input\n");
     char **segments = split_on_semicolons(expanded_input);
-    if (!segments) return;
+    if (!segments) {
+        draw_prompt();
+        // ends up skipping a line on empty input, instead of 
+        // moving to the next line. --shell_line is a bandaid
+        // until i can figure out whats happening
+        --shell->shell_line;
+        tfree(segments);
+        return;
+    } 
     Command **cmds;
     int num_cmds = 0;    
     for (int i = 0; segments[i]; ++i) {
+        sfprint("segment %d\n", i);
         num_cmds = 0;
         cmds = parse_commands(segments[i], &num_cmds);
-        sfprint("parse_commands returned %d command(s)\n", num_cmds);
-
+        sfprint("parse_commands returned %d command(s)\n", num_cmds + 1);
+        for (int a = 0; a < num_cmds; ++a) {
+            sfprint("command: %s\n", segments[a]);
+        }
         // Validate command list before doing anything
         bool valid = true;
         if (!cmds || num_cmds <= 0) {
@@ -235,12 +141,12 @@ void process_input_segments(ShellContext *shell, const char *expanded_input) {
         } else {
             for (int j = 0; j < num_cmds; ++j) {
                 if (!cmds[j]) {
-                    sfprint("cmds[%d] is NULL", j);
+                    sfprint("cmds[%d] is NULL\n", j);
                     valid = false;
                     break;
                 }
                 if (!cmds[j]->argv || !cmds[j]->argv[0]) {
-                   sfprint("cmds[%d] has invalid argv", j);
+                   sfprint("cmds[%d] has invalid argv\n", j);
                     valid = false;
                     break;
                 }
@@ -261,43 +167,74 @@ void process_input_segments(ShellContext *shell, const char *expanded_input) {
             shell->running = 0;
             free_command_list(cmds, num_cmds);
             free_segments(segments);
+            
+            for (int i = 0; i < MAX_HISTORY_LINES; ++i) {
+                if (shell->line_history[i]) {
+                    tfree(shell->line_history[i]);
+                    shell->line_history[i] = NULL;
+                }
+            }
+            tfree(shell->line_history);
+            shell->line_history = NULL;
+            tfree(shell);
             asm volatile("cli; hlt");
             break;
         }
-        else if (str_eq(cmd_name, "LS") || str_eq(cmd_name, "ls")) {
+        else if (str_eq(cmd_name, "ls") || str_eq(cmd_name, "LS")) {
             clear_line_no_prompt(shell);
-            shell->shell_line++;
+            //shell->shell_line++;
             fs_list_files(shell);
-            //free_command_list(cmds, num_cmds);
+            sfprint("Returned from free_command_list\n");
             break;
         }
-        else if (str_eq(cmd_name, "cat") || str_eq(cmd_name, "CAT")) {
-            
+        else if (str_eq(cmd_name, "cat") || str_eq(cmd_name, "CAT")) {            
             if (cmds[0]->argv[1]) {
                 clear_line_no_prompt(shell);
                 //shell->shell_line++;
-                print_file(cmds[0]->argv[1], shell);
-                //free_command_list(cmds, num_cmds);
+                if (!print_file(cmds[0]->argv[1], shell)) {
+                    //sfprint("\n\n\nshell_line: %d\n", shell->shell_line);
+                    draw_prompt();
+                    fb_draw_stringsh("No file, or no data to read!", 28, FG, BG, shell);
+                    clamp_n_scroll(shell);
+                    shell->shell_line++;
+                    clamp_n_scroll(shell);
+                    break;
+                }
+                clamp_n_scroll(shell);
+                shell->shell_line++;
+                clamp_n_scroll(shell);
+                break;
+            } else {
+                draw_prompt();
+                fb_draw_stringsh("No argument detected", 20, FG, BG, shell);
+                clamp_n_scroll(shell);
                 break;
             }
+        } 
+        else if (str_eq(cmd_name, "")) {
+            draw_prompt();
+            break;
+
         } else { 
             draw_prompt();
-            fbprintf("command: '%s' es no bueno", cmd_name);
-            fb_draw_string("\n", FG, BG);
-            draw_prompt();
-            //free_command_list(cmds, num_cmds);
+            fbprintf(shell, "command: '%s' es no bueno", cmd_name);
+            //fb_draw_string("\n", FG, BG);
+            clamp_n_scroll(shell);
+            
         }
     }
-    sfprint("freeing segments\n");
+    //sfprint("freeing segments\n");
     free_segments(segments);
+    //sfprint("Cleared segment, freeing command list\n");
     free_command_list(cmds, num_cmds);
     clear_line(shell);
+    //sfprint("Cleared line\n");
 }
 
 // Note: whitespace trimming deferred to parse_commands()
 // This function only handles quote-aware semicolon splitting
 char **split_on_semicolons(const char *input) {
-    sfprint("splitting input\n");
+    //sfprint("splitting input\n");
     if (!input) return NULL; // Defensive: null input yields null output
 
     size_t len = custom_strlen(input);
@@ -325,6 +262,7 @@ char **split_on_semicolons(const char *input) {
     int escape = 0;     // Escape state: 1 means next char is literal
 
     while (*p) {
+        sfprint("while\n");
         if (escape) {
             /*
              * Previous char was a backslash, so this char is taken literally.
@@ -371,6 +309,7 @@ char **split_on_semicolons(const char *input) {
 
             if (*start) {
                 // Only store non-empty segments
+                sfprint("\n\n\nDuping segment %d\n", seg_count);
                 segments[seg_count++] = strdupe(start);       
             }
             start = p + 1; // New segment starts after the delimiter
@@ -384,9 +323,11 @@ char **split_on_semicolons(const char *input) {
     if (*start) {
         segments[seg_count++] = strdupe(start);
     }
-    sfprint("seg count: %8", seg_count);
+    sfprint("seg count: %8\n", seg_count);
     segments[seg_count] = NULL; // NULL-terminate the array
-
+    for (int i = 0; i < seg_count; ++i) {
+        sfprint("segments[%d] : %s\n", i, segments[i]);
+    }
     tfree(copy);
     return segments;
 }

@@ -100,41 +100,6 @@ void fb_draw_string(const char* str, uint32_t fg, uint32_t bg) {
     }
 }
 
-//Trying to get shell line logic in sync with fb_draw,
-//reading any file that goes past avaiable lines in shell causes UB
-//NEED TO FIX 
-// void fb_draw_stringsh(const char* str, int len, uint32_t fg, uint32_t bg, struct ShellContext *shell) {
-//     for (size_t i = 0; str[i]; ++i) {
-//         char c = str[i];
-
-//         if (c == '\n') {
-//             shell->shell_line++;
-//             clamp_n_scroll(shell); // scroll if needed
-//             fb_cursor.x = 0;
-//             fb_cursor.y = shell->shell_line * FONT_HEIGHT;
-//             continue;
-//         }
-
-//         fb_draw_char(fbuff_base, framebuffer.pitch,
-//                      fb_cursor.x, fb_cursor.y,
-//                      c, fg, bg);
-
-//         fb_cursor.x += FONT_WIDTH;
-
-//         // Wrap if line exceeds screen width
-//         if (fb_cursor.x >= framebuffer.width) {
-//             fb_cursor.x = 0;
-//             shell->shell_line++;
-//             clamp_n_scroll(shell);
-//             fb_cursor.y = shell->shell_line * FONT_HEIGHT;
-//         }
-//     }
-//     if (str[len] != '\n') {
-//         shell->shell_line++;
-//         clamp_n_scroll(shell);
-//     }
-//     line_history[history_count++] = str;
-// }
 
 void fb_draw_string_with_cursor(const char* str, size_t cursor_pos, uint32_t fg, uint32_t bg, uint32_t cursor_fg, uint32_t cursor_bg) {
 
@@ -256,14 +221,14 @@ char* format_fb_print(const char* fmt, va_list args) {
     return fbuff;
 }
 
-void fbprintf(const char* str, ...) {
+void fbprintf(ShellContext *shell, const char* str, ...) {
     va_list args;
     va_start(args, str);
     char *fbuff = format_fb_print(str, args);
     va_end(args);
 
     if (fbuff) {
-        fb_draw_string(fbuff, FG, BG);
+        fb_draw_stringsh(fbuff, custom_strlen(fbuff), FG, BG, shell);
         tfree(fbuff); // free after use
     }
 }
@@ -395,7 +360,7 @@ void walk_mb2(void* mb_ptr) {
         //serial_write("Entered While loop\n");
         const struct mb2_tag* tag = (const struct mb2_tag*)p;
         if (tag->type == 0 && tag->size == 8) {
-            sfprint("Framebuffer addr: %8\n", framebuffer.addr);
+            sfprint("Count: %d Framebuffer addr: %8\n", count, framebuffer.addr);
             break;
         }
         //log tags   
@@ -505,4 +470,5 @@ void walk_mb2(void* mb_ptr) {
         ++count;
     
     }
+    sfprint("finished MB walk\n");
 }

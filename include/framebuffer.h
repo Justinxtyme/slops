@@ -57,12 +57,11 @@ void fb_cursor_reset(void);
 
 void fb_clear(uint32_t bg_color);
 
-
-void fbprintf(const char* str, ...);
+void fbprintf(ShellContext *shell, const char* str, ...);
 
 char* format_fb_print(const char* fmt, va_list args);
 
-void fb_draw_stringsh(const char* str, int len, uint32_t fg, uint32_t bg, struct ShellContext *shell);
+//void fb_draw_stringsh(const char* str, int len, uint32_t fg, uint32_t bg, struct ShellContext *shell);
 
 // On the backburner for now
 // void sfbprint(const char* str, ...);

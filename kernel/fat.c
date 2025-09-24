@@ -97,87 +97,6 @@ int parse_dir_entry(const uint8_t* e, fat_dir_entry* out) {
 }
 
 
-int list_dir_entry(const uint8_t* e, fat_dir_entry* out, ShellContext *shell) {
-    // Skip entries that are not valid files/directories:
-    // e[0]:q == 0x00 → no more entries in this directory (end marker)
-    // e[11] == 0x0F → long file name (LFN) entry, not a short 8.3 entry
-    // e[0] == 0xE5 → deleted entry
-    if (e[0] == 0x00 || e[11] == 0x0F || e[0] == 0xE5) {
-        //sfprint("skipped entry\n");
-        return 0;
-    }
-    // Extract the 8-character name field (offset 0x00–0x07)
-    // Replace space padding with '\0' to terminate the string early
-    for (int i = 0; i < 8; i++) {
-        out->name[i] = (e[i] == ' ') ? '\0' : e[i];
-        //sfprint("e[%d] = %c  i[%d] = %c\n", i, e[i], i, out->name[i]);
-    }
-    out->name[8] = '\0'; // Ensure null-termination
-    // Extract the 3-character extension field (offset 0x08–0x0A)
-    // Replace space padding with '\0'
-    for (int i = 0; i < 3; i++) {
-        out->ext[i] = (e[8 + i] == ' ') ? '\0' : e[8 + i];
-    }
-    out->ext[3] = '\0'; // Null-terminate
-    // File attributes byte (offset 0x0B)
-    // Bitfield: ReadOnly, Hidden, System, VolumeID, Directory, Archive
-    out->attr = e[11];
-    // First cluster number (offset 0x1A–0x1B)
-    // FAT12/16: this is the full cluster number
-    // FAT32: this is the low word; high word is at offset 0x14–0x15
-    out->first_cluster = e[26] | (e[27] << 8);
-    // File size in bytes (offset 0x1C–0x1F), little-endian
-    out->size = e[28] | (e[29] << 8) | (e[30] << 16) | (e[31] << 24);
-    // Return 1 to indicate a valid short directory entry was parsed
-    char full[13]; // 8 chars for name + 1 dot + 3 chars for ext + null terminator
-    int name_len = custom_strlen(out->name);
-    int ext_len = custom_strlen(out->ext);
-    for (int i = 0; i < name_len; i++) {
-        full[i] = out->name[i];
-    }
-    if (ext_len > 0) {
-        full[name_len] = '.';
-        for (int i = 0; i < 3; i++) {
-            full[i + (name_len +1)] = out->ext[i];
-        }
-        full[(name_len + 1) + 3] = '\0';
-    } else {
-        full[name_len] = '\0';
-    }
-    sfprint("%s\n", full);
-    int new_len = custom_strlen(full);
-    clamp_n_scroll(shell);
-    fb_draw_stringsh(full, new_len, FG, BG, shell);
-    fb_draw_stringsh("\n", 1, FG, BG, shell);
-    // shell->shell_line++;
-    // clamp_n_scroll(shell);
-    return 1;
-}
-
-int list_root(const fat_bpb* bpb, fat_dir_entry* out, ShellContext *shell) {
-    
-    uint32_t root_dir_sectors =
-        ((bpb->root_entry_count * 32) + (bpb->bytes_per_sector - 1)) / bpb->bytes_per_sector;
-    uint8_t sector[512]; // Temporary buffer for one sector of directory entries
-
-    // Loop through each sector of the root directory
-    for (uint32_t s = 0; s < root_dir_sectors; s++) {
-        //sfprint("loop %8\n", s);
-        // Read the current root directory sector from disk
-        ata_read_sector(bpb->root_start_lba + s, sector);
-        sfprint("Sector read: %8\n", bpb->root_start_lba + s);
-
-        for (int i = 0; i < 512; i += 32) {
-            if (!list_dir_entry(sector + i, out, shell)) {
-                continue;
-            }  
-        } 
-    } 
-    // File not found in the root directory
-    sfprint("files printed\n");
-    return 0;
-}
-
 int find_root_entry(const fat_bpb* bpb, const char* name83, fat_dir_entry* out) {
     uint32_t root_dir_sectors =
         ((bpb->root_entry_count * 32) + (bpb->bytes_per_sector - 1)) / bpb->bytes_per_sector;
@@ -314,45 +233,109 @@ int fs_list_files(ShellContext *shell) {
     return 0;
 }
 
-// int print_file(char *filename, ShellContext *shell) {
-//     uint8_t buffer[4096];
-//     int len = fs_read_file(filename, buffer, sizeof(buffer));
-//     if (len > 0) {
-//         buffer[len] = '\0'; // if it's text
-//         sfprint("\n%s\n%s\n", filename, buffer);
-//         fb_draw_string("\n", 0x00FFFFFF, 0x00000000);
-//         shell->shell_line++;
-//         fb_draw_stringsh(buffer, 0x00FFFFFF, 0x00000000, shell);
-//         for (int i = 0; i < len; i++) {
-//             if (buffer[i] == '\n') {
-//                 shell->shell_line++;
-//             }
-//         }
-//         sfprint("shell line: %d", shell->shell_line);
-//     } else {
-//         sfprint("No data detected in %c", filename);
-//     }
-//     return 0;
-// }
+
+int list_dir_entry(const uint8_t* e, fat_dir_entry* out, ShellContext *shell) {
+    // Skip entries that are not valid files/directories:
+    // e[0]:q == 0x00 → no more entries in this directory (end marker)
+    // e[11] == 0x0F → long file name (LFN) entry, not a short 8.3 entry
+    // e[0] == 0xE5 → deleted entry
+    if (e[0] == 0x00 || e[11] == 0x0F || e[0] == 0xE5) {
+        //skippable entry
+        return 0;
+    }
+    // Extract the 8-character name field (offset 0x00–0x07)
+    // Replace space padding with '\0' to terminate the string early
+    for (int i = 0; i < 8; i++) {
+        out->name[i] = (e[i] == ' ') ? '\0' : e[i];
+        //sfprint("e[%d] = %c  i[%d] = %c\n", i, e[i], i, out->name[i]);
+    }
+    out->name[8] = '\0'; // Ensure null-termination
+    // Extract the 3-character extension field (offset 0x08–0x0A)
+    // Replace space padding with '\0'
+    for (int i = 0; i < 3; i++) {
+        out->ext[i] = (e[8 + i] == ' ') ? '\0' : e[8 + i];
+    }
+    out->ext[3] = '\0'; // Null-terminate
+    // File attributes byte (offset 0x0B)
+    // Bitfield: ReadOnly, Hidden, System, VolumeID, Directory, Archive
+    out->attr = e[11];
+    // First cluster number (offset 0x1A–0x1B)
+    // FAT12/16: this is the full cluster number
+    // FAT32: this is the low word; high word is at offset 0x14–0x15
+    out->first_cluster = e[26] | (e[27] << 8);
+    // File size in bytes (offset 0x1C–0x1F), little-endian
+    out->size = e[28] | (e[29] << 8) | (e[30] << 16) | (e[31] << 24);
+    // Return 1 to indicate a valid short directory entry was parsed
+    char full[13]; // 8 chars for name + 1 dot + 3 chars for ext + null terminator
+    int name_len = custom_strlen(out->name);
+    int ext_len = custom_strlen(out->ext);
+    for (int i = 0; i < name_len; i++) {
+        full[i] = out->name[i];
+    }
+    if (ext_len > 0) {
+        full[name_len] = '.';
+        for (int i = 0; i < 3; i++) {
+            full[i + (name_len +1)] = out->ext[i];
+        }
+        full[(name_len + 1) + 3] = '\0';
+    } else {
+        full[name_len] = '\0';
+    }
+    sfprint("%s\n", full);
+    int new_len = custom_strlen(full);
+    full[new_len] = '\0';
+    char full_with_nl[14]; // 13 chars for name + '\n' + '\0'
+    // Copy the filename into the new buffer
+    for (int j = 0; j < new_len; ++j) {
+        full_with_nl[j] = full[j];
+    }
+    full_with_nl[new_len]     = '\n';
+    full_with_nl[new_len + 1] = '\0';
+    fb_draw_stringsh(full_with_nl, new_len + 1, FG, BG, shell);
+    sfprint("new_len for %s = %d\n", full, new_len);
+ 
+    return 1;
+}
+
+int list_root(const fat_bpb* bpb, fat_dir_entry* out, ShellContext *shell) {
+    
+    uint32_t root_dir_sectors =
+        ((bpb->root_entry_count * 32) + (bpb->bytes_per_sector - 1)) / bpb->bytes_per_sector;
+    uint8_t sector[512]; // Temporary buffer for one sector of directory entries
+
+    // Loop through each sector of the root directory
+    for (uint32_t s = 0; s < root_dir_sectors; s++) {
+        //sfprint("loop %8\n", s);
+        // Read the current root directory sector from disk
+        ata_read_sector(bpb->root_start_lba + s, sector);
+        sfprint("Sector read: %8\n", bpb->root_start_lba + s);
+
+        for (int i = 0; i < 512; i += 32) {
+            if (!list_dir_entry(sector + i, out, shell)) {
+                continue;
+            }  
+        } 
+    } 
+    // File not found in the root directory
+    sfprint("files printed\n");
+    return 0;
+}
+
+
 
 int print_file(char *filename, ShellContext *shell) {
     uint8_t buffer[4096];
     int len = fs_read_file(filename, buffer, sizeof(buffer));
     if (len > 0) {
         buffer[len] = '\0';
-        //fb_draw_string("\n", FG, BG);
-        // shell->shell_line++;
-        // clamp_n_scroll(shell);
+        clamp_n_scroll(shell);
         fb_cursor.x = 0;
         fb_cursor.y = shell->shell_line * FONT_HEIGHT;
-
-        //fb_draw_string(buffer, FG, BG);
         fb_draw_stringsh(buffer, len, FG, BG, shell);
-        // shell->shell_line++;
-        // clamp_n_scroll(shell);
+        return 1;
     } else {
-        fb_draw_stringsh("No data detected\n", 17, FG, BG, shell);
+        sfprint("len == 0\n");
+        return 0;
         
     }
-    return 0;
 }

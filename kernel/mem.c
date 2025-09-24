@@ -1,10 +1,11 @@
 #include "mem.h"
 #include "serial.h"
 #include "multiboot.h"
+#include <stddef.h>
 
 
 #define MAX_PAGES 1048576 // for 4 GiB of RAM
-#define HEAP_SIZE 4096
+#define HEAP_SIZE (300 * 1024)
 uint8_t page_bitmap[MAX_PAGES / 8]; // 128 KiB
 
 
@@ -55,6 +56,7 @@ void* thralloc(size_t size) { // Alloc a block of mem from the heap of at least 
 }
 
 void* cralloc(size_t num, size_t size) {
+    //size = (size + 15) & ~15;
     size_t total = num * size;
     void* ptr = thralloc(total);
     if (!ptr) return NULL;
@@ -90,16 +92,18 @@ void tfree(void *ptr) { // Free a previously allocated block
     Chunk *chunk = ((Chunk*)ptr) - 1; // Step back from the payload to get the chunk header
     sfprint("Freeing %8 bytes\n", chunk->size);
     chunk->is_free = 1; // Mark this chunk as free
-
+    sfprint("Freed %8 bytes, checking Coalesce opp\n", chunk->size);
     // Coalesce with next chunk if it's free
     if (chunk->next && chunk->next->is_free) {
         chunk->size += sizeof(Chunk) + chunk->next->size; // Absorb next chunk's space
         chunk->next = chunk->next->next; // Skip over the absorbed chunk
+        //sfprint("Combining chunks\n");
     }
-
+    //sfprint("Checking previous chunk\n");
     // Coalesce with previous chunk if it's free
     Chunk *current = free_head;
     Chunk *prev = NULL;
+    //sfprint("Walking list to find chunk\n");
     while (current && current != chunk) { // Walk list to find the chunk
         prev = current;
         current = current->next;
@@ -153,3 +157,23 @@ void init_allocator(const struct multiboot_tag_mmap* mmap) {
         }
     }
 }
+
+
+// Prevent name mangling if compiling as C++
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void* memset(void* bufptr, int value, size_t size) {
+    sfprint("\n\n\n\nmemset called\n\n\n\n");
+    unsigned char* buf = (unsigned char*) bufptr;
+    for (size_t i = 0; i < size; i++) {
+        buf[i] = (unsigned char) value;
+    }
+    return bufptr;
+}
+
+#ifdef __cplusplus
+}
+#endif
+

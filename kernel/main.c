@@ -53,8 +53,11 @@ void kernel_main(void* mb_info) {
 
     fb_clear(0x00000000);
     fb_cursor_reset();
-    ShellContext shell = { .running = 1 };
-    init_shell_lines(&shell);
+    ShellContext *shell = thralloc(sizeof(ShellContext));
+    shell->running = 1;
+
+    //ShellContext shell = { .running = 1 };
+    init_shell_lines(shell);
     kbd_init(); 
     init_kbd_state();
     draw_prompt();
@@ -63,8 +66,17 @@ void kernel_main(void* mb_info) {
     
     for (;;) {
         __asm__ __volatile__("sti; hlt"); // enable interrupts, sleep until IRQ
-        read_sc(&shell);                  // drain after wake
+        read_sc(shell);                  // drain after wake
     }
+    
+    for (int i = 0; i < MAX_HISTORY_LINES; ++i) {
+        if (shell->line_history[i]) {
+            tfree(shell->line_history[i]);
+            shell->line_history[i] = NULL;
+        }
+    }
+    tfree(shell->line_history);
+    shell->line_history = NULL;
 
 
     asm volatile("cli; hlt");

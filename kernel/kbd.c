@@ -45,7 +45,7 @@ static void kb_flush(void) {
 
 void kbd_init(void) {
     kb_flush(); // clear any junk from buffer
-
+    sfprint("Keyboard initializing\n");
     // Force known LED state: all off
     capslock_state = 0;
     numlock_state = 0;

@@ -7,7 +7,7 @@
 
 #define INPUT_SIZE 1024
 #define LINEBUFF_SIZE 128
-#define MAX_HISTORY_LINES 1024
+#define MAX_HISTORY_LINES 128
 
 typedef struct ShellContext {
     char input[INPUT_SIZE];   // User input buffer
@@ -15,7 +15,7 @@ typedef struct ShellContext {
     int shell_line;
     int scroll_offset;
     int history_count;
-    char *line_history[MAX_HISTORY_LINES];
+    char** line_history;
     // int  last_status; // Last command exit status
     // int   tty_fd; // Terminal file descriptor
     // pid_t shell_pgid; // Shell process group ID
@@ -44,5 +44,18 @@ void shift_right(char* buf, size_t pos, size_t len);
 void shift_left(char* buf, size_t pos, size_t len);
 
 void clamp_n_scroll(ShellContext *shell);
+
+void fb_draw_stringsh(const char* str, int len, uint32_t fg, uint32_t bg, struct ShellContext *shell);
+
+void scroll_on_newline(ShellContext *shell);
+
+void scroll_on_wrap(ShellContext *shell);
+
+
+// void scroll_history_up(ShellContext *shell);
+
+// void scroll_history_down(ShellContext *shell);
+
+// void redraw_from_history(ShellContext *shell);
 
 #endif

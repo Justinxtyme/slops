@@ -15,22 +15,19 @@
 
 
 char linebuff[LINEBUFF_SIZE];
-size_t line_len = 0;
+int line_len = 0;
 int max_lines;
 int max_chars;
-size_t cursor_pos = 0;
+int cursor_pos = 0;
 
 
 
 void fb_draw_stringsh(const char* str, int len, uint32_t fg, uint32_t bg, struct ShellContext *shell) {
-    for (size_t i = 0; str[i]; ++i) {
+    for (size_t i = 0; i < len; ++i) {
         char c = str[i];
 
         if (c == '\n') {
-            shell->shell_line++;
-            clamp_n_scroll(shell); // scroll if needed
-            fb_cursor.x = 0;
-            fb_cursor.y = shell->shell_line * FONT_HEIGHT;
+            scroll_on_newline(shell);
             continue;
         }
 
@@ -42,58 +39,78 @@ void fb_draw_stringsh(const char* str, int len, uint32_t fg, uint32_t bg, struct
 
         // Wrap if line exceeds screen width
         if (fb_cursor.x >= framebuffer.width) {
-            fb_cursor.x = 0;
-            shell->shell_line++;
-            clamp_n_scroll(shell);
-            fb_cursor.y = shell->shell_line * FONT_HEIGHT;
+            scroll_on_wrap(shell);
         }
     }
-    if (str[len] != '\n') {
-        shell->shell_line++;
-        clamp_n_scroll(shell);
-    }
-    shell->line_history[shell->history_count++] = str;
+}
+
+void scroll_on_newline(ShellContext *shell) {
+    shell->shell_line++;
+    clamp_n_scroll(shell);
+    fb_cursor.x = 0;
+    fb_cursor.y = shell->shell_line * FONT_HEIGHT;
+    clamp_n_scroll(shell);
+}
+
+void scroll_on_wrap(ShellContext *shell) {
+    sfprint("\n\n\nWrapping\n");
+    fb_cursor.x = 0;
+    shell->shell_line++;
+    fb_cursor.y = shell->shell_line * FONT_HEIGHT;
+    clamp_n_scroll(shell);
 }
 
 
-void scroll_history_up(ShellContext *shell) {
-    // Only scroll if there are more lines above the current view
-    if (shell->history_count > max_lines && shell->scroll_offset < (shell->history_count - max_lines)) {
-        shell->scroll_offset++;
-        redraw_from_history(shell);
-    }
-}
+// void scroll_history_up(ShellContext *shell) {
+//     // Only scroll if there are more lines above the current view
+//     if (shell->history_count > max_lines && shell->scroll_offset < (shell->history_count - max_lines)) {
+//         shell->scroll_offset++;
+//         redraw_from_history(shell);
+//     }
+// }
 
-void scroll_history_down(ShellContext *shell) {
-    // Only scroll if we’re not already at the bottom
-    if (shell->scroll_offset > 0) {
-        shell->scroll_offset--;
-        redraw_from_history(shell);
-    }
-}
+// void scroll_history_down(ShellContext *shell) {
+//     // Only scroll if we’re not already at the bottom
+//     if (shell->scroll_offset > 0) {
+//         shell->scroll_offset--;
+//         redraw_from_history(shell);
+//     }
+// }
 
-void redraw_from_history(ShellContext *shell) {
-    fb_clear(BG);
-    int start = shell->history_count - max_lines - shell->scroll_offset;
-    if (start < 0) start = 0;
+// void redraw_from_history(ShellContext *shell) {
+//     fb_clear(BG);
+//     int start = shell->history_count - max_lines - shell->scroll_offset;
+//     if (start < 0) start = 0;
 
-    for (int i = 0; i < max_lines && (start + i) < shell->history_count; i++) {
-        fb_draw_string(shell->line_history[start + i], FG, BG);
-    }
-}
+//     for (int i = 0; i < max_lines && (start + i) < shell->history_count; i++) {
+//         fb_draw_string(shell->line_history[start + i], FG, BG);
+//     }
+// }
 
 
 
 
 void init_shell_lines(ShellContext *shell) {
+    sfprint("Initialzing shell vars\n");
     shell->shell_line = 0;
     max_lines = framebuffer.height / (FONT_HEIGHT) - 1;
-    max_chars = framebuffer.width / FONT_WIDTH;
-    shell->scroll_offset;
-    shell->history_count;
+    max_chars = framebuffer.width / (FONT_WIDTH) - 1;
+    sfprint("\n\n\n\nmax chars: %d\n", max_chars);
+    shell->scroll_offset = 0;
+    sfprint("scroll offset: %d\n", shell->scroll_offset);
+    shell->history_count = 0;
+    sfprint("History count: %d\n", shell->history_count);
+    shell->line_history = cralloc(MAX_HISTORY_LINES, sizeof(char*));
+    assertf(shell->line_history != NULL);
+
     for (int i = 0; i < MAX_HISTORY_LINES; ++i) {
-        shell->line_history[i] = 0;
+        shell->line_history[i] = cralloc(max_chars + 1, sizeof(char)); // +1 for null terminator
+        sfprint("line_history[%d] = %d\n", i, shell->line_history[i]);
+        assertf(shell->line_history[i] != NULL);
     }
+
+
+    sfprint("Shell vars initialized\n");
 }
 
 void draw_prompt(void) {
@@ -170,8 +187,11 @@ void scroll_screen_up(ShellContext *shell) {
 
 void clamp_n_scroll(ShellContext *shell) {
     if (shell->shell_line >= max_lines) {
+        sfprint("SCROLL triggered at shell_line=%d\n", shell->shell_line);
         scroll_screen_up(shell);
+        return;
     }
+    return;
 }
 
 
@@ -220,7 +240,7 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
         //fb_draw_string(linebuff, FG, BG);
         return 0;
 
-    } else if (isprint(ascii) && line_len  < LINEBUFF_SIZE - 1) {
+    } else if (isprint(ascii) && line_len  < (max_chars - 1)) {
         sfprint("line length: %8   max_chars: %8  cursor pos: %8\n", line_len, max_chars, cursor_pos);
         //sfprint("shell line: %8\n", shell_line);
         //sfprint("ISPRINT drawing to x, y coord: %8, %8\n", fb_cursor.x, fb_cursor.y);
@@ -258,26 +278,11 @@ int process_scancode(ShellContext *shell, uint8_t scancode) {
 }
 
 int process_cmd(ShellContext *shell, char *cmd) {
-    //sfprint("COMMAND PROCESSING: %s\n", cmd);
-
-    if (str_eq(cmd, "")) {
-        //sfprint("no command detected\n");
-        clear_line(shell);
-        shell->shell_line++;
-        fb_draw_string("No command detected", FG, BG);
-        shell->line_history[shell->history_count++] = "No command detected";
-        clear_line(shell);
-        return 0;
-
-    } else if (str_eq(cmd, "READ")) {
-        return 0;
-
-    } else {
-        clear_line_no_prompt(shell);
-        shell->shell_line++;
-        process_input_segments(shell, linebuff);
-        return 0;
-       } 
+    sfprint("COMMAND PROCESSING: %s\n", cmd);
+    clear_line_no_prompt(shell);
+    shell->shell_line++;
+    process_input_segments(shell, linebuff);
+    return 0;
 }
 
 

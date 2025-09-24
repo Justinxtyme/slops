@@ -31,5 +31,6 @@ void* cralloc(size_t num, size_t size);
 
 void tfree(void *ptr);
 
+void* memset(void* bufptr, int value, size_t size);
 
 #endif
